@@ -1,0 +1,17 @@
+# Hesla, která jsou sice v hunspellu, ale do křížovky nepatří:
+# ohnuté tvary bez rozumné legendy, citoslovce, zbytky po stoplistu.
+nim ním nimi jim jej jejž onen
+aach áách psst pššt brrr hurá hej ejhle
+píšu píšeš čtu čteš jdu jdeš vím víš
+tiský rank pňovský pňov aneb
+lžicích lžicemi rukama nohama očima ušima
+ukázaly ukázali ukázalo cenící cenící se
+žat vat žni žnou
+ln vn kv mv aj tzv resp popř zvl
+# Tvary, které hunspell vede, ale legendu k nim napsat nejde
+cha inu obé obe tobě tobe témž temz oč hr ps pš oz du bal inu viď vid
+dni dní cenu lidem úseku useku peri peří obé
+rýt rzávat ržávat houkaný
+# poslední várka: citoslovce a částice bez šance na legendu
+grrrr bla blabla nojo ani není neni něčí neci níž niz čem cem geom ném nem
+mlel fér fer nanic nojo aha ejhle

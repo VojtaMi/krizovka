@@ -1,0 +1,692 @@
+<title>Křížovka pro Kaplera</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=Barlow+Condensed:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
+<style>
+  /* ---- světlá paleta: chladný novinový papír, ofsetová modř ---- */
+  :root {
+    --paper:      #E8EBEE;
+    --card:       #FCFCFB;
+    --card-2:     #DFE4E8;
+    --ink:        #111518;
+    --ink-soft:   #4C565E;
+    --rule:       #8C959C;
+    --rule-soft:  #B9C1C7;
+    --taj-fill:   #C2DBEC;
+    --taj-ink:    #123E57;
+    --hl:         #C6DFF2;
+    --hl-taj:     #93C0DE;
+    --hl-legend:  #FBF0CE;
+    --accent:     #1D5A78;
+    --accent-ink: #FFFFFF;
+    --good:       #2C6A4E;
+    --bad:        #A6392B;
+    --cell: 64px;
+    --legend-size: 10px;
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:     #101418;
+      --card:      #1B2127;
+      --card-2:    #232C33;
+      --ink:       #EEF3F6;
+      --ink-soft:  #9DA9B2;
+      --rule:      #56626B;
+      --rule-soft: #39444C;
+      --taj-fill:  #1B3F55;
+      --taj-ink:   #BEDDEF;
+      --hl:        #354C5C;
+      --hl-taj:    #37718F;
+      --hl-legend: #4A4126;
+      --accent:    #7CBEDD;
+      --accent-ink:#0C1216;
+      --good:      #6FC496;
+      --bad:       #E88B7B;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:     #101418;
+    --card:      #1B2127;
+    --card-2:    #232C33;
+    --ink:       #EEF3F6;
+    --ink-soft:  #9DA9B2;
+    --rule:      #56626B;
+    --rule-soft: #39444C;
+    --taj-fill:  #1B3F55;
+    --taj-ink:   #BEDDEF;
+    --hl:        #354C5C;
+    --hl-taj:    #37718F;
+    --hl-legend: #4A4126;
+    --accent:    #7CBEDD;
+    --accent-ink:#0C1216;
+    --good:      #6FC496;
+    --bad:       #E88B7B;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Source Serif 4", Georgia, serif;
+    line-height: 1.55;
+  }
+  .wrap {
+    max-width: 1060px;
+    margin: 0 auto;
+    padding: 32px 20px 64px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  /* ---- hlavička ve stylu časopisecké stránky ---- */
+  .masthead { display: flex; gap: 18px; align-items: flex-start; }
+  .num {
+    flex: none;
+    width: 74px; height: 74px;
+    background: var(--ink); color: var(--paper);
+    font-family: Archivo, system-ui, sans-serif;
+    font-weight: 800; font-size: 34px;
+    display: grid; place-items: center;
+    letter-spacing: -0.02em;
+  }
+  .zadani { flex: 1; min-width: 0; }
+  .kicker {
+    font-family: "Barlow Condensed", system-ui, sans-serif;
+    font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.14em; font-size: 12px;
+    color: var(--ink-soft);
+    margin: 0 0 4px;
+  }
+  .zadani p { margin: 0; font-size: 16px; max-width: 62ch; text-wrap: pretty; }
+  .zadani .gap {
+    background: var(--taj-fill); color: var(--taj-ink);
+    padding: 0 6px; font-style: italic; white-space: nowrap;
+  }
+
+  /* ---- mřížka ---- */
+  .board-scroll { overflow-x: auto; padding-bottom: 4px; }
+  .board {
+    display: grid; gap: 0;
+    border: 2px solid var(--ink);
+    background: var(--rule);
+    width: max-content;
+  }
+  .cell {
+    width: var(--cell); height: var(--cell);
+    border-right: 1px solid var(--rule-soft);
+    border-bottom: 1px solid var(--rule-soft);
+    background: var(--card);
+    position: relative;
+    overflow: hidden;
+  }
+  .cell.legend {
+    background: var(--card-2);
+    display: flex; flex-direction: column;
+    font-family: "Barlow Condensed", system-ui, sans-serif;
+    font-weight: 700;
+    font-size: var(--legend-size);
+    line-height: 1.08;
+    text-transform: uppercase;
+    color: var(--ink);
+    letter-spacing: 0.015em;
+  }
+  .cell.legend.blind { background: var(--rule-soft); }
+  /* dvě definice v jednom políčku dostanou půlku výšky — musí zdrobnět */
+  .cell.legend.two { font-size: calc(var(--legend-size) - 1.2px); line-height: 1.02; }
+  .clue {
+    flex: 1 1 0; min-height: 0;
+    padding: 3px 10px 3px 4px;
+    position: relative;
+    display: flex; align-items: center;
+    hyphens: auto;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .clue + .clue { border-top: 1px dotted var(--rule); }
+  .clue:hover { background: var(--hl-legend); }
+  .clue.on { background: var(--hl-legend); }
+  .clue.taj { color: var(--taj-ink); background: var(--taj-fill); }
+  .clue.taj.on { background: var(--hl-taj); }
+  .clue:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .clue .arrow {
+    position: absolute;
+    font-size: 11px; line-height: 1;
+    color: var(--accent);
+  }
+  .clue .arrow.right { right: 1px; top: 50%; transform: translateY(-50%); }
+  .clue .arrow.down  { right: 1px; bottom: 1px; }
+
+  .cell.letter { padding: 0; }
+  .cell.letter.taj { background: var(--taj-fill); }
+  .cell.letter.in-word { background: var(--hl); }
+  .cell.letter.taj.in-word { background: var(--hl-taj); }
+  .cell input {
+    width: 100%; height: 100%;
+    border: 0; background: transparent;
+    text-align: center;
+    font-family: Archivo, system-ui, sans-serif;
+    font-weight: 700;
+    font-size: calc(var(--cell) * 0.44);
+    color: var(--ink);
+    text-transform: uppercase;
+    padding: 0;
+    caret-color: var(--accent);
+  }
+  .cell.letter.taj input { color: var(--taj-ink); }
+  .cell input:focus { outline: none; }
+  .cell.letter.here { box-shadow: inset 0 0 0 3px var(--accent); }
+  .cell.wrong input { color: var(--bad); text-decoration: line-through; }
+  .cell.right input { color: var(--good); }
+
+  /* ---- ovládání ---- */
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  button {
+    font-family: "Barlow Condensed", system-ui, sans-serif;
+    font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+    font-size: 13px;
+    padding: 9px 16px;
+    border: 1.5px solid var(--ink);
+    background: transparent; color: var(--ink);
+    cursor: pointer;
+  }
+  button:hover { background: var(--ink); color: var(--paper); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  button.primary:hover { filter: brightness(1.12); }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .zoom { display: flex; gap: 0; margin-left: auto; }
+  .zoom button { padding: 9px 13px; font-size: 15px; line-height: 1; }
+  .zoom button + button { border-left: 0; }
+  .hint {
+    font-size: 13px; color: var(--ink-soft);
+    font-family: "Barlow Condensed", system-ui, sans-serif;
+    letter-spacing: 0.02em;
+    flex-basis: 100%;
+  }
+
+  /* ---- tajenka ---- */
+  .taj-panel {
+    border: 1.5px solid var(--rule);
+    padding: 14px 16px;
+    background: var(--card);
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .taj-cells { display: flex; flex-wrap: wrap; gap: 3px; }
+  .taj-box {
+    width: 26px; height: 30px;
+    border: 1px solid var(--rule);
+    background: var(--taj-fill); color: var(--taj-ink);
+    display: grid; place-items: center;
+    font-family: Archivo, system-ui, sans-serif;
+    font-weight: 700; font-size: 14px;
+  }
+  .taj-box.space { border: 0; background: transparent; width: 12px; }
+  .status { font-size: 14px; min-height: 1.5em; }
+  .status.ok { color: var(--good); font-weight: 600; }
+  .status.err { color: var(--bad); font-weight: 600; }
+
+  /* ---- data o vzniku ---- */
+  .facts {
+    border-top: 2px solid var(--ink);
+    padding-top: 14px;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 14px 22px;
+  }
+  .fact dt {
+    font-family: "Barlow Condensed", system-ui, sans-serif;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    font-size: 11px; font-weight: 700; color: var(--ink-soft);
+    margin: 0;
+  }
+  .fact dd {
+    margin: 2px 0 0;
+    font-family: Archivo, system-ui, sans-serif;
+    font-weight: 700; font-size: 21px;
+    font-variant-numeric: tabular-nums;
+  }
+  .fact dd small {
+    display: block; font-family: "Source Serif 4", Georgia, serif;
+    font-weight: 400; font-size: 12.5px; color: var(--ink-soft);
+    letter-spacing: 0;
+  }
+  .pomucka {
+    font-size: 14px; font-style: italic; color: var(--ink-soft);
+    border-top: 1px solid var(--rule-soft); padding-top: 12px;
+  }
+  .pomucka b { font-style: normal; font-weight: 600; color: var(--ink); }
+  .colophon { font-size: 13px; color: var(--ink-soft); }
+  .colophon code {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px; background: var(--card-2); padding: 1px 5px;
+  }
+
+  @media (max-width: 900px) { :root { --cell: 46px; --legend-size: 7.8px; } }
+  @media (max-width: 560px) { :root { --cell: 38px; --legend-size: 6.8px; } }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+  @media print {
+    :root { --cell: 12.4mm; --legend-size: 6.6pt;
+            --paper: #fff; --card: #fff; --card-2: #fff;
+            --ink: #000; --ink-soft: #333; --rule: #000; --rule-soft: #666;
+            --taj-fill: #dceaf4; --taj-ink: #000; --accent: #000;
+            --hl: #fff; --hl-taj: #dceaf4; --hl-legend: #fff; }
+    .toolbar, .status, .no-print { display: none !important; }
+    .wrap { padding: 0; gap: 14px; max-width: none; }
+    body { background: #fff; }
+    .cell input { color: #000 !important; }
+    .cell.letter.here { box-shadow: none; }
+  }
+</style>
+
+<div class="wrap">
+  <header class="masthead">
+    <div class="num" id="puzzle-num">1</div>
+    <div class="zadani">
+      <p class="kicker">Švédská křížovka s tajenkou</p>
+      <p id="zadani-text"></p>
+    </div>
+  </header>
+
+  <div class="board-scroll">
+    <div class="board" id="board" role="group" aria-label="Křížovka"></div>
+  </div>
+
+  <div class="toolbar no-print">
+    <button class="primary" id="btn-check">Zkontrolovat</button>
+    <button id="btn-clear">Vymazat</button>
+    <button id="btn-reveal">Vzdát to</button>
+    <button id="btn-print">Vytisknout</button>
+    <span class="zoom">
+      <button id="btn-smaller" aria-label="Zmenšit mřížku" title="Zmenšit">A&minus;</button>
+      <button id="btn-bigger" aria-label="Zvětšit mřížku" title="Zvětšit">A+</button>
+    </span>
+    <span class="hint">
+      Klikněte na první políčko za definicí — směr psaní se nastaví sám.
+      V rohu, kde začínají dvě slova, ho přepnete dalším kliknutím nebo mezerníkem.
+      CH patří do jednoho políčka: napište C a hned H.
+    </span>
+  </div>
+
+  <div class="status" id="status" role="status" aria-live="polite"></div>
+
+  <section class="taj-panel">
+    <p class="kicker" style="margin:0">Tajenka</p>
+    <div class="taj-cells" id="taj-cells"></div>
+  </section>
+
+  <section>
+    <p class="kicker">Jak mřížka vznikla</p>
+    <dl class="facts" id="facts"></dl>
+  </section>
+
+  <p class="pomucka" id="pomucka"></p>
+  <p class="colophon" id="colophon"></p>
+</div>
+
+<script id="krizovka-data" type="application/json">{"width": 13, "height": 20, "cells": [[{"t": "legend", "clues": []}, {"t": "legend", "clues": [{"text": "přemístění o kus dál", "arrow": "down", "word": "POSUN", "slot": 43, "tajenka": false}]}, {"t": "legend", "clues": [{"text": "tučná část mléka i český skladatel", "arrow": "down", "word": "SMETANA", "slot": 46, "tajenka": false}]}, {"t": "legend", "clues": []}, {"t": "legend", "clues": []}, {"t": "legend", "clues": []}, {"t": "legend", "clues": []}, {"t": "legend", "clues": []}, {"t": "legend", "clues": [{"text": "přemoci, zdolat", "arrow": "down", "word": "ZMOCI", "slot": 64, "tajenka": false}]}, {"t": "legend", "clues": [{"text": "na samý závěr", "arrow": "down", "word": "NAKONEC", "slot": 67, "tajenka": false}]}, {"t": "legend", "clues": []}, {"t": "legend", "clues": [{"text": "plané povídání", "arrow": "down", "word": "RECI", "slot": 75, "tajenka": false}]}, {"t": "legend", "clues": [{"text": "bez barvy v obličeji", "arrow": "down", "word": "BLEDY", "slot": 78, "tajenka": false}]}], [{"t": "legend", "clues": [{"text": "4. p. mn. č. od pes", "arrow": "right", "word": "PSY", "slot": 0, "tajenka": false}]}, {"t": "letter", "s": "P", "k": null, "w": [0, 43]}, {"t": "letter", "s": "S", "k": null, "w": [0, 46]}, {"t": "letter", "s": "Y", "k": null, "w": [0]}, {"t": "legend", "clues": [{"text": "palivo vyrobené z uhlí", "arrow": "down", "word": "KOKS", "slot": 51, "tajenka": false}]}, {"t": "legend", "clues": []}, {"t": "legend", "clues": [{"text": "objet klusem dokola", "arrow": "down", "word": "OBKLUSAT", "slot": 58, "tajenka": false}]}, {"t": "legend", "clues": [{"text": "chem. zn. zinku", "arrow": "right", "word": "ZN", "slot": 1, "tajenka": false}]}, {"t": "letter", "s": "Z", "k": null, "w": [1, 64]}, {"t": "letter", "s": "N", "k": null, "w": [1, 67]}, {"t": "legend", "clues": [{"text": "chem. zn. rubidia", "arrow": "right", "word": "RB", "slot": 2, "tajenka": false}, {"text": "chvilková nejistota", "arrow": "down", "word": "ZAVAHANI", "slot": 71, "tajenka": false}]}, {"t": "letter", "s": "R", "k": null, "w": [2, 75]}, {"t": "letter", "s": "B", "k": null, "w": [2, 78]}], [{"t": "legend", "clues": [{"text": "posvátná slabika", "arrow": "right", "word": "OM", "slot": 3, "tajenka": false}]}, {"t": "letter", "s": "O", "k": null, "w": [3, 43]}, {"t": "letter", "s": "M", "k": null, "w": [3, 46]}, {"t": "legend", "clues": []}, {"t": "letter", "s": "K", "k": null, "w": [51]}, {"t": "legend", "clues": []}, {"t": "letter", "s": "O", "k": null, "w": [58]}, {"t": "legend", "clues": [{"text": "oblíbenec, protěžovaný", "arrow": "right", "word": "MAZEL", "slot": 4, "tajenka": false}]}, {"t": "letter", "s": "M", "k": null, "w": [4, 64]}, {"t": "letter", "s": "A", "k": null, "w": [4, 67]}, {"t": "letter", "s": "Z", "k": null, "w": [4, 71]}, {"t": "letter", "s": "E", "k": null, "w": [4, 75]}, {"t": "letter", "s": "L", "k": null, "w": [4, 78]}], [{"t": "legend", "clues": [{"text": "sušená tráva", "arrow": "right", "word": "SENO", "slot": 5, "tajenka": false}]}, {"t": "letter", "s": "S", "k": null, "w": [5, 43]}, {"t": "letter", "s": "E", "k": null, "w": [5, 46]}, {"t": "letter", "s": "N", "k": null, "w": [5]}, {"t": "letter", "s": "O", "k": null, "w": [5, 51]}, {"t": "legend", "clues": [{"text": "zamezení průchodu", "arrow": "right", "word": "BLOKACE", "slot": 6, "tajenka": false}, {"text": "pořadí za sebou", "arrow": "down", "word": "RADA", "slot": 55, "tajenka": false}]}, {"t": "letter", "s": "B", "k": null, "w": [6, 58]}, {"t": "letter", "s": "L", "k": null, "w": [6]}, {"t": "letter", "s": "O", "k": null, "w": [6, 64]}, {"t": "letter", "s": "K", "k": null, "w": [6, 67]}, {"t": "letter", "s": "A", "k": null, "w": [6, 71]}, {"t": "letter", "s": "C", "k": null, "w": [6, 75]}, {"t": "letter", "s": "E", "k": null, "w": [6, 78]}], [{"t": "legend", "clues": [{"text": "starý název tónu do", "arrow": "right", "word": "UT", "slot": 7, "tajenka": false}]}, {"t": "letter", "s": "U", "k": null, "w": [7, 43]}, {"t": "letter", "s": "T", "k": null, "w": [7, 46]}, {"t": "legend", "clues": [{"text": "část těla pod hlavou", "arrow": "right", "word": "KRK", "slot": 8, "tajenka": false}, {"text": "poslední rozloučení", "arrow": "down", "word": "POHREB", "slot": 49, "tajenka": false}]}, {"t": "letter", "s": "K", "k": null, "w": [8, 51]}, {"t": "letter", "s": "R", "k": null, "w": [8, 55]}, {"t": "letter", "s": "K", "k": null, "w": [8, 58]}, {"t": "legend", "clues": [{"text": "nemoc z roku 2020", "arrow": "right", "word": "COVID", "slot": 9, "tajenka": false}, {"text": "chem. zn. samaria", "arrow": "down", "word": "SM", "slot": 60, "tajenka": false}]}, {"t": "letter", "s": "C", "k": null, "w": [9, 64]}, {"t": "letter", "s": "O", "k": null, "w": [9, 67]}, {"t": "letter", "s": "V", "k": null, "w": [9, 71]}, {"t": "letter", "s": "I", "k": null, "w": [9, 75]}, {"t": "letter", "s": "D", "k": null, "w": [9, 78]}], [{"t": "legend", "clues": [{"text": "1. DÍL TAJENKY", "arrow": "right", "word": "NAPSALSINA", "slot": 10, "tajenka": true}]}, {"t": "letter", "s": "N", "k": 0, "w": [10, 43]}, {"t": "letter", "s": "A", "k": 0, "w": [10, 46]}, {"t": "letter", "s": "P", "k": 0, "w": [10, 49]}, {"t": "letter", "s": "S", "k": 0, "w": [10, 51]}, {"t": "letter", "s": "A", "k": 0, "w": [10, 55]}, {"t": "letter", "s": "L", "k": 0, "w": [10, 58]}, {"t": "letter", "s": "S", "k": 0, "w": [10, 60]}, {"t": "letter", "s": "I", "k": 0, "w": [10, 64]}, {"t": "letter", "s": "N", "k": 0, "w": [10, 67]}, {"t": "letter", "s": "A", "k": 0, "w": [10, 71]}, {"t": "legend", "clues": [{"text": "drobný škůdce na rostlinách", "arrow": "down", "word": "MSICE", "slot": 76, "tajenka": false}]}, {"t": "letter", "s": "Y", "k": null, "w": [78]}], [{"t": "legend", "clues": []}, {"t": "legend", "clues": [{"text": "chem. zn. nobelia", "arrow": "right", "word": "NO", "slot": 11, "tajenka": false}, {"text": "nashromáždit krádeží", "arrow": "down", "word": "NAKRAST", "slot": 44, "tajenka": false}]}, {"t": "letter", "s": "N", "k": null, "w": [11, 46]}, {"t": "letter", "s": "O", "k": null, "w": [11, 49]}, {"t": "legend", "clues": [{"text": "obytná budova", "arrow": "right", "word": "DUM", "slot": 12, "tajenka": false}, {"text": "sibiřská řeka", "arrow": "down", "word": "LENA", "slot": 52, "tajenka": false}]}, {"t": "letter", "s": "D", "k": null, "w": [12, 55]}, {"t": "letter", "s": "U", "k": null, "w": [12, 58]}, {"t": "letter", "s": "M", "k": null, "w": [12, 60]}, {"t": "legend", "clues": [{"text": "citoslovce odkašlání", "arrow": "right", "word": "EHM", "slot": 13, "tajenka": false}]}, {"t": "letter", "s": "E", "k": null, "w": [13, 67]}, {"t": "letter", "s": "H", "k": null, "w": [13, 71]}, {"t": "letter", "s": "M", "k": null, "w": [13, 76]}, {"t": "legend", "clues": []}], [{"t": "legend", "clues": [{"text": "zvučně, ne potichu", "arrow": "right", "word": "NAHLAS", "slot": 14, "tajenka": false}]}, {"t": "letter", "s": "N", "k": null, "w": [14, 44]}, {"t": "letter", "s": "A", "k": null, "w": [14, 46]}, {"t": "letter", "s": "H", "k": null, "w": [14, 49]}, {"t": "letter", "s": "L", "k": null, "w": [14, 52]}, {"t": "letter", "s": "A", "k": null, "w": [14, 55]}, {"t": "letter", "s": "S", "k": null, "w": [14, 58]}, {"t": "legend", "clues": [{"text": "dost brzy", "arrow": "right", "word": "VCAS", "slot": 15, "tajenka": false}]}, {"t": "letter", "s": "V", "k": null, "w": [15]}, {"t": "letter", "s": "C", "k": null, "w": [15, 67]}, {"t": "letter", "s": "A", "k": null, "w": [15, 71]}, {"t": "letter", "s": "S", "k": null, "w": [15, 76]}, {"t": "legend", "clues": [{"text": "kdo zkouší výrobek", "arrow": "down", "word": "TESTER", "slot": 79, "tajenka": false}]}], [{"t": "legend", "clues": []}, {"t": "letter", "s": "A", "k": null, "w": [44]}, {"t": "legend", "clues": [{"text": "chem. zn. rhenia", "arrow": "right", "word": "RE", "slot": 16, "tajenka": false}, {"text": "svalnatá část nohy", "arrow": "down", "word": "LYTKO", "slot": 47, "tajenka": false}]}, {"t": "letter", "s": "R", "k": null, "w": [16, 49]}, {"t": "letter", "s": "E", "k": null, "w": [16, 52]}, {"t": "legend", "clues": [{"text": "lenochod z pralesa", "arrow": "right", "word": "AI", "slot": 17, "tajenka": false}, {"text": "kolem dokola", "arrow": "down", "word": "OKOLO", "slot": 56, "tajenka": false}]}, {"t": "letter", "s": "A", "k": null, "w": [17, 58]}, {"t": "letter", "s": "I", "k": null, "w": [17]}, {"t": "legend", "clues": []}, {"t": "legend", "clues": [{"text": "vlákno na šití", "arrow": "right", "word": "NIT", "slot": 18, "tajenka": false}, {"text": "chem. zn. lutecia", "arrow": "down", "word": "LU", "slot": 68, "tajenka": false}]}, {"t": "letter", "s": "N", "k": null, "w": [18, 71]}, {"t": "letter", "s": "I", "k": null, "w": [18, 76]}, {"t": "letter", "s": "T", "k": null, "w": [18, 79]}], [{"t": "legend", "clues": [{"text": "drahocenný šperk", "arrow": "right", "word": "KLENOT", "slot": 19, "tajenka": false}]}, {"t": "letter", "s": "K", "k": null, "w": [19, 44]}, {"t": "letter", "s": "L", "k": null, "w": [19, 47]}, {"t": "letter", "s": "E", "k": null, "w": [19, 49]}, {"t": "letter", "s": "N", "k": null, "w": [19, 52]}, {"t": "letter", "s": "O", "k": null, "w": [19, 56]}, {"t": "letter", "s": "T", "k": null, "w": [19, 58]}, {"t": "legend", "clues": [{"text": "cesta mezi domy", "arrow": "right", "word": "ULICE", "slot": 20, "tajenka": false}, {"text": "chem. zn. polonia", "arrow": "down", "word": "PO", "slot": 61, "tajenka": false}]}, {"t": "letter", "s": "U", "k": null, "w": [20]}, {"t": "letter", "s": "L", "k": null, "w": [20, 68]}, {"t": "letter", "s": "I", "k": null, "w": [20, 71]}, {"t": "letter", "s": "C", "k": null, "w": [20, 76]}, {"t": "letter", "s": "E", "k": null, "w": [20, 79]}], [{"t": "legend", "clues": [{"text": "štíhlý mořský pták", "arrow": "right", "word": "RYBAK", "slot": 21, "tajenka": false}]}, {"t": "letter", "s": "R", "k": null, "w": [21, 44]}, {"t": "letter", "s": "Y", "k": null, "w": [21, 47]}, {"t": "letter", "s": "B", "k": null, "w": [21, 49]}, {"t": "letter", "s": "A", "k": null, "w": [21, 52]}, {"t": "letter", "s": "K", "k": null, "w": [21, 56]}, {"t": "legend", "clues": [{"text": "samice pruhované šelmy", "arrow": "down", "word": "TYGRICE", "slot": 59, "tajenka": false}]}, {"t": "letter", "s": "P", "k": null, "w": [61]}, {"t": "legend", "clues": [{"text": "4. p. j. č. od pes", "arrow": "down", "word": "PSA", "slot": 65, "tajenka": false}]}, {"t": "letter", "s": "U", "k": null, "w": [68]}, {"t": "legend", "clues": [{"text": "chem. zn. einsteinia", "arrow": "right", "word": "ES", "slot": 22, "tajenka": false}, {"text": "první tón stupnice", "arrow": "down", "word": "DO", "slot": 72, "tajenka": false}]}, {"t": "letter", "s": "E", "k": null, "w": [22, 76]}, {"t": "letter", "s": "S", "k": null, "w": [22, 79]}], [{"t": "legend", "clues": [{"text": "chem. zn. astatu", "arrow": "right", "word": "AT", "slot": 23, "tajenka": false}]}, {"t": "letter", "s": "A", "k": null, "w": [23, 44]}, {"t": "letter", "s": "T", "k": null, "w": [23, 47]}, {"t": "legend", "clues": [{"text": "nečekaně vtrhnout dovnitř", "arrow": "down", "word": "VPADNOUT", "slot": 50, "tajenka": false}]}, {"t": "legend", "clues": [{"text": "palivo k vytápění", "arrow": "right", "word": "OTOP", "slot": 24, "tajenka": false}, {"text": "dlouhé časové období", "arrow": "down", "word": "ERA", "slot": 53, "tajenka": false}]}, {"t": "letter", "s": "O", "k": null, "w": [24, 56]}, {"t": "letter", "s": "T", "k": null, "w": [24, 59]}, {"t": "letter", "s": "O", "k": null, "w": [24, 61]}, {"t": "letter", "s": "P", "k": null, "w": [24, 65]}, {"t": "legend", "clues": [{"text": "nepřítomnost světla", "arrow": "down", "word": "TMA", "slot": 69, "tajenka": false}]}, {"t": "letter", "s": "D", "k": null, "w": [72]}, {"t": "legend", "clues": []}, {"t": "letter", "s": "T", "k": null, "w": [79]}], [{"t": "legend", "clues": [{"text": "naprosto výtečný", "arrow": "right", "word": "SKVELY", "slot": 25, "tajenka": false}]}, {"t": "letter", "s": "S", "k": null, "w": [25, 44]}, {"t": "letter", "s": "K", "k": null, "w": [25, 47]}, {"t": "letter", "s": "V", "k": null, "w": [25, 50]}, {"t": "letter", "s": "E", "k": null, "w": [25, 53]}, {"t": "letter", "s": "L", "k": null, "w": [25, 56]}, {"t": "letter", "s": "Y", "k": null, "w": [25, 59]}, {"t": "legend", "clues": [{"text": "číslovka 100", "arrow": "right", "word": "STO", "slot": 26, "tajenka": false}, {"text": "1. p. mn. č. od ruka", "arrow": "down", "word": "RUCE", "slot": 62, "tajenka": false}]}, {"t": "letter", "s": "S", "k": null, "w": [26, 65]}, {"t": "letter", "s": "T", "k": null, "w": [26, 69]}, {"t": "letter", "s": "O", "k": null, "w": [26, 72]}, {"t": "legend", "clues": [{"text": "který staví", "arrow": "down", "word": "STAVICI", "slot": 77, "tajenka": false}]}, {"t": "letter", "s": "E", "k": null, "w": [79]}], [{"t": "legend", "clues": [{"text": "2. DÍL TAJENKY", "arrow": "right", "word": "TOPROGRAM", "slot": 27, "tajenka": true}]}, {"t": "letter", "s": "T", "k": 1, "w": [27, 44]}, {"t": "letter", "s": "O", "k": 1, "w": [27, 47]}, {"t": "letter", "s": "P", "k": 1, "w": [27, 50]}, {"t": "letter", "s": "R", "k": 1, "w": [27, 53]}, {"t": "letter", "s": "O", "k": 1, "w": [27, 56]}, {"t": "letter", "s": "G", "k": 1, "w": [27, 59]}, {"t": "letter", "s": "R", "k": 1, "w": [27, 62]}, {"t": "letter", "s": "A", "k": 1, "w": [27, 65]}, {"t": "letter", "s": "M", "k": 1, "w": [27, 69]}, {"t": "legend", "clues": [{"text": "chem. zn. stroncia", "arrow": "right", "word": "SR", "slot": 28, "tajenka": false}, {"text": "chem. zn. kryptonu", "arrow": "down", "word": "KR", "slot": 73, "tajenka": false}]}, {"t": "letter", "s": "S", "k": null, "w": [28, 77]}, {"t": "letter", "s": "R", "k": null, "w": [28, 79]}], [{"t": "legend", "clues": []}, {"t": "legend", "clues": [{"text": "mladá žena", "arrow": "down", "word": "DIVKA", "slot": 45, "tajenka": false}]}, {"t": "legend", "clues": [{"text": "havajská láva", "arrow": "right", "word": "AA", "slot": 29, "tajenka": false}]}, {"t": "letter", "s": "A", "k": null, "w": [29, 50]}, {"t": "letter", "s": "A", "k": null, "w": [29, 53]}, {"t": "legend", "clues": [{"text": "chem. zn. ruthenia", "arrow": "right", "word": "RU", "slot": 30, "tajenka": false}, {"text": "hrozivě mručet", "arrow": "down", "word": "VRCET", "slot": 57, "tajenka": false}]}, {"t": "letter", "s": "R", "k": null, "w": [30, 59]}, {"t": "letter", "s": "U", "k": null, "w": [30, 62]}, {"t": "legend", "clues": [{"text": "úřední listina i výtvarný žánr", "arrow": "right", "word": "AKT", "slot": 31, "tajenka": false}]}, {"t": "letter", "s": "A", "k": null, "w": [31, 69]}, {"t": "letter", "s": "K", "k": null, "w": [31, 73]}, {"t": "letter", "s": "T", "k": null, "w": [31, 77]}, {"t": "legend", "clues": [{"text": "žasnout (se)", "arrow": "down", "word": "DIVIT", "slot": 80, "tajenka": false}]}], [{"t": "legend", "clues": [{"text": "starý muž, praotec", "arrow": "right", "word": "DED", "slot": 32, "tajenka": false}]}, {"t": "letter", "s": "D", "k": null, "w": [32, 45]}, {"t": "letter", "s": "E", "k": null, "w": [32]}, {"t": "letter", "s": "D", "k": null, "w": [32, 50]}, {"t": "legend", "clues": [{"text": "více", "arrow": "right", "word": "VIC", "slot": 33, "tajenka": false}, {"text": "sál univerzity", "arrow": "down", "word": "AULA", "slot": 54, "tajenka": false}]}, {"t": "letter", "s": "V", "k": null, "w": [33, 57]}, {"t": "letter", "s": "I", "k": null, "w": [33, 59]}, {"t": "letter", "s": "C", "k": null, "w": [33, 62]}, {"t": "legend", "clues": [{"text": "7. p. mn. č. od my", "arrow": "down", "word": "NAMI", "slot": 66, "tajenka": false}]}, {"t": "legend", "clues": [{"text": "vyznamenání", "arrow": "right", "word": "RAD", "slot": 34, "tajenka": false}, {"text": "duhovka oka", "arrow": "down", "word": "IRIS", "slot": 70, "tajenka": false}]}, {"t": "letter", "s": "R", "k": null, "w": [34, 73]}, {"t": "letter", "s": "A", "k": null, "w": [34, 77]}, {"t": "letter", "s": "D", "k": null, "w": [34, 80]}], [{"t": "legend", "clues": []}, {"t": "letter", "s": "I", "k": null, "w": [45]}, {"t": "legend", "clues": [{"text": "obvinění", "arrow": "right", "word": "NARCENI", "slot": 35, "tajenka": false}, {"text": "orgán čichu", "arrow": "down", "word": "NOS", "slot": 48, "tajenka": false}]}, {"t": "letter", "s": "N", "k": null, "w": [35, 50]}, {"t": "letter", "s": "A", "k": null, "w": [35, 54]}, {"t": "letter", "s": "R", "k": null, "w": [35, 57]}, {"t": "letter", "s": "C", "k": null, "w": [35, 59]}, {"t": "letter", "s": "E", "k": null, "w": [35, 62]}, {"t": "letter", "s": "N", "k": null, "w": [35, 66]}, {"t": "letter", "s": "I", "k": null, "w": [35, 70]}, {"t": "legend", "clues": [{"text": "římské šest", "arrow": "right", "word": "VI", "slot": 36, "tajenka": false}, {"text": "štíhlý běhavý pes", "arrow": "down", "word": "CHRT", "slot": 74, "tajenka": false}]}, {"t": "letter", "s": "V", "k": null, "w": [36, 77]}, {"t": "letter", "s": "I", "k": null, "w": [36, 80]}], [{"t": "legend", "clues": [{"text": "dítě vlastního potomka", "arrow": "right", "word": "VNOUCE", "slot": 37, "tajenka": false}]}, {"t": "letter", "s": "V", "k": null, "w": [37, 45]}, {"t": "letter", "s": "N", "k": null, "w": [37, 48]}, {"t": "letter", "s": "O", "k": null, "w": [37, 50]}, {"t": "letter", "s": "U", "k": null, "w": [37, 54]}, {"t": "letter", "s": "C", "k": null, "w": [37, 57]}, {"t": "letter", "s": "E", "k": null, "w": [37, 59]}, {"t": "legend", "clues": [{"text": "sklad dokumentů", "arrow": "right", "word": "ARCHIV", "slot": 38, "tajenka": false}, {"text": "chem. zn. skandia", "arrow": "down", "word": "SC", "slot": 63, "tajenka": false}]}, {"t": "letter", "s": "A", "k": null, "w": [38, 66]}, {"t": "letter", "s": "R", "k": null, "w": [38, 70]}, {"t": "letter", "s": "CH", "k": null, "w": [38, 74]}, {"t": "letter", "s": "I", "k": null, "w": [38, 77]}, {"t": "letter", "s": "V", "k": null, "w": [38, 80]}], [{"t": "legend", "clues": [{"text": "těleso kulatého tvaru", "arrow": "right", "word": "KOULE", "slot": 39, "tajenka": false}]}, {"t": "letter", "s": "K", "k": null, "w": [39, 45]}, {"t": "letter", "s": "O", "k": null, "w": [39, 48]}, {"t": "letter", "s": "U", "k": null, "w": [39, 50]}, {"t": "letter", "s": "L", "k": null, "w": [39, 54]}, {"t": "letter", "s": "E", "k": null, "w": [39, 57]}, {"t": "legend", "clues": [{"text": "usmiřovací (kámen)", "arrow": "right", "word": "SMIRCI", "slot": 40, "tajenka": false}]}, {"t": "letter", "s": "S", "k": null, "w": [40, 63]}, {"t": "letter", "s": "M", "k": null, "w": [40, 66]}, {"t": "letter", "s": "I", "k": null, "w": [40, 70]}, {"t": "letter", "s": "R", "k": null, "w": [40, 74]}, {"t": "letter", "s": "C", "k": null, "w": [40, 77]}, {"t": "letter", "s": "I", "k": null, "w": [40, 80]}], [{"t": "legend", "clues": [{"text": "radioaktivní halogen", "arrow": "right", "word": "ASTAT", "slot": 41, "tajenka": false}]}, {"t": "letter", "s": "A", "k": null, "w": [41, 45]}, {"t": "letter", "s": "S", "k": null, "w": [41, 48]}, {"t": "letter", "s": "T", "k": null, "w": [41, 50]}, {"t": "letter", "s": "A", "k": null, "w": [41, 54]}, {"t": "letter", "s": "T", "k": null, "w": [41, 57]}, {"t": "legend", "clues": [{"text": "zbavovat nečistot", "arrow": "right", "word": "CISTIT", "slot": 42, "tajenka": false}]}, {"t": "letter", "s": "C", "k": null, "w": [42, 63]}, {"t": "letter", "s": "I", "k": null, "w": [42, 66]}, {"t": "letter", "s": "S", "k": null, "w": [42, 70]}, {"t": "letter", "s": "T", "k": null, "w": [42, 74]}, {"t": "letter", "s": "I", "k": null, "w": [42, 77]}, {"t": "letter", "s": "T", "k": null, "w": [42, 80]}]], "slots": [{"d": "right", "c": [[1, 1], [1, 2], [1, 3]], "a": [1, 0], "taj": false, "p": 0}, {"d": "right", "c": [[1, 8], [1, 9]], "a": [1, 7], "taj": false, "p": 0}, {"d": "right", "c": [[1, 11], [1, 12]], "a": [1, 10], "taj": false, "p": 0}, {"d": "right", "c": [[2, 1], [2, 2]], "a": [2, 0], "taj": false, "p": 0}, {"d": "right", "c": [[2, 8], [2, 9], [2, 10], [2, 11], [2, 12]], "a": [2, 7], "taj": false, "p": 0}, {"d": "right", "c": [[3, 1], [3, 2], [3, 3], [3, 4]], "a": [3, 0], "taj": false, "p": 0}, {"d": "right", "c": [[3, 6], [3, 7], [3, 8], [3, 9], [3, 10], [3, 11], [3, 12]], "a": [3, 5], "taj": false, "p": 0}, {"d": "right", "c": [[4, 1], [4, 2]], "a": [4, 0], "taj": false, "p": 0}, {"d": "right", "c": [[4, 4], [4, 5], [4, 6]], "a": [4, 3], "taj": false, "p": 0}, {"d": "right", "c": [[4, 8], [4, 9], [4, 10], [4, 11], [4, 12]], "a": [4, 7], "taj": false, "p": 0}, {"d": "right", "c": [[5, 1], [5, 2], [5, 3], [5, 4], [5, 5], [5, 6], [5, 7], [5, 8], [5, 9], [5, 10]], "a": [5, 0], "taj": true, "p": 0}, {"d": "right", "c": [[6, 2], [6, 3]], "a": [6, 1], "taj": false, "p": 0}, {"d": "right", "c": [[6, 5], [6, 6], [6, 7]], "a": [6, 4], "taj": false, "p": 0}, {"d": "right", "c": [[6, 9], [6, 10], [6, 11]], "a": [6, 8], "taj": false, "p": 0}, {"d": "right", "c": [[7, 1], [7, 2], [7, 3], [7, 4], [7, 5], [7, 6]], "a": [7, 0], "taj": false, "p": 0}, {"d": "right", "c": [[7, 8], [7, 9], [7, 10], [7, 11]], "a": [7, 7], "taj": false, "p": 0}, {"d": "right", "c": [[8, 3], [8, 4]], "a": [8, 2], "taj": false, "p": 0}, {"d": "right", "c": [[8, 6], [8, 7]], "a": [8, 5], "taj": false, "p": 0}, {"d": "right", "c": [[8, 10], [8, 11], [8, 12]], "a": [8, 9], "taj": false, "p": 0}, {"d": "right", "c": [[9, 1], [9, 2], [9, 3], [9, 4], [9, 5], [9, 6]], "a": [9, 0], "taj": false, "p": 0}, {"d": "right", "c": [[9, 8], [9, 9], [9, 10], [9, 11], [9, 12]], "a": [9, 7], "taj": false, "p": 0}, {"d": "right", "c": [[10, 1], [10, 2], [10, 3], [10, 4], [10, 5]], "a": [10, 0], "taj": false, "p": 0}, {"d": "right", "c": [[10, 11], [10, 12]], "a": [10, 10], "taj": false, "p": 0}, {"d": "right", "c": [[11, 1], [11, 2]], "a": [11, 0], "taj": false, "p": 0}, {"d": "right", "c": [[11, 5], [11, 6], [11, 7], [11, 8]], "a": [11, 4], "taj": false, "p": 0}, {"d": "right", "c": [[12, 1], [12, 2], [12, 3], [12, 4], [12, 5], [12, 6]], "a": [12, 0], "taj": false, "p": 0}, {"d": "right", "c": [[12, 8], [12, 9], [12, 10]], "a": [12, 7], "taj": false, "p": 0}, {"d": "right", "c": [[13, 1], [13, 2], [13, 3], [13, 4], [13, 5], [13, 6], [13, 7], [13, 8], [13, 9]], "a": [13, 0], "taj": true, "p": 0}, {"d": "right", "c": [[13, 11], [13, 12]], "a": [13, 10], "taj": false, "p": 0}, {"d": "right", "c": [[14, 3], [14, 4]], "a": [14, 2], "taj": false, "p": 0}, {"d": "right", "c": [[14, 6], [14, 7]], "a": [14, 5], "taj": false, "p": 0}, {"d": "right", "c": [[14, 9], [14, 10], [14, 11]], "a": [14, 8], "taj": false, "p": 0}, {"d": "right", "c": [[15, 1], [15, 2], [15, 3]], "a": [15, 0], "taj": false, "p": 0}, {"d": "right", "c": [[15, 5], [15, 6], [15, 7]], "a": [15, 4], "taj": false, "p": 0}, {"d": "right", "c": [[15, 10], [15, 11], [15, 12]], "a": [15, 9], "taj": false, "p": 0}, {"d": "right", "c": [[16, 3], [16, 4], [16, 5], [16, 6], [16, 7], [16, 8], [16, 9]], "a": [16, 2], "taj": false, "p": 0}, {"d": "right", "c": [[16, 11], [16, 12]], "a": [16, 10], "taj": false, "p": 0}, {"d": "right", "c": [[17, 1], [17, 2], [17, 3], [17, 4], [17, 5], [17, 6]], "a": [17, 0], "taj": false, "p": 0}, {"d": "right", "c": [[17, 8], [17, 9], [17, 10], [17, 11], [17, 12]], "a": [17, 7], "taj": false, "p": 0}, {"d": "right", "c": [[18, 1], [18, 2], [18, 3], [18, 4], [18, 5]], "a": [18, 0], "taj": false, "p": 0}, {"d": "right", "c": [[18, 7], [18, 8], [18, 9], [18, 10], [18, 11], [18, 12]], "a": [18, 6], "taj": false, "p": 0}, {"d": "right", "c": [[19, 1], [19, 2], [19, 3], [19, 4], [19, 5]], "a": [19, 0], "taj": false, "p": 0}, {"d": "right", "c": [[19, 7], [19, 8], [19, 9], [19, 10], [19, 11], [19, 12]], "a": [19, 6], "taj": false, "p": 0}, {"d": "down", "c": [[1, 1], [2, 1], [3, 1], [4, 1], [5, 1]], "a": [0, 1], "taj": false, "p": 0}, {"d": "down", "c": [[7, 1], [8, 1], [9, 1], [10, 1], [11, 1], [12, 1], [13, 1]], "a": [6, 1], "taj": false, "p": 1}, {"d": "down", "c": [[15, 1], [16, 1], [17, 1], [18, 1], [19, 1]], "a": [14, 1], "taj": false, "p": 0}, {"d": "down", "c": [[1, 2], [2, 2], [3, 2], [4, 2], [5, 2], [6, 2], [7, 2]], "a": [0, 2], "taj": false, "p": 0}, {"d": "down", "c": [[9, 2], [10, 2], [11, 2], [12, 2], [13, 2]], "a": [8, 2], "taj": false, "p": 1}, {"d": "down", "c": [[17, 2], [18, 2], [19, 2]], "a": [16, 2], "taj": false, "p": 1}, {"d": "down", "c": [[5, 3], [6, 3], [7, 3], [8, 3], [9, 3], [10, 3]], "a": [4, 3], "taj": false, "p": 1}, {"d": "down", "c": [[12, 3], [13, 3], [14, 3], [15, 3], [16, 3], [17, 3], [18, 3], [19, 3]], "a": [11, 3], "taj": false, "p": 0}, {"d": "down", "c": [[2, 4], [3, 4], [4, 4], [5, 4]], "a": [1, 4], "taj": false, "p": 0}, {"d": "down", "c": [[7, 4], [8, 4], [9, 4], [10, 4]], "a": [6, 4], "taj": false, "p": 1}, {"d": "down", "c": [[12, 4], [13, 4], [14, 4]], "a": [11, 4], "taj": false, "p": 1}, {"d": "down", "c": [[16, 4], [17, 4], [18, 4], [19, 4]], "a": [15, 4], "taj": false, "p": 1}, {"d": "down", "c": [[4, 5], [5, 5], [6, 5], [7, 5]], "a": [3, 5], "taj": false, "p": 1}, {"d": "down", "c": [[9, 5], [10, 5], [11, 5], [12, 5], [13, 5]], "a": [8, 5], "taj": false, "p": 1}, {"d": "down", "c": [[15, 5], [16, 5], [17, 5], [18, 5], [19, 5]], "a": [14, 5], "taj": false, "p": 1}, {"d": "down", "c": [[2, 6], [3, 6], [4, 6], [5, 6], [6, 6], [7, 6], [8, 6], [9, 6]], "a": [1, 6], "taj": false, "p": 0}, {"d": "down", "c": [[11, 6], [12, 6], [13, 6], [14, 6], [15, 6], [16, 6], [17, 6]], "a": [10, 6], "taj": false, "p": 0}, {"d": "down", "c": [[5, 7], [6, 7]], "a": [4, 7], "taj": false, "p": 1}, {"d": "down", "c": [[10, 7], [11, 7]], "a": [9, 7], "taj": false, "p": 1}, {"d": "down", "c": [[13, 7], [14, 7], [15, 7], [16, 7]], "a": [12, 7], "taj": false, "p": 1}, {"d": "down", "c": [[18, 7], [19, 7]], "a": [17, 7], "taj": false, "p": 1}, {"d": "down", "c": [[1, 8], [2, 8], [3, 8], [4, 8], [5, 8]], "a": [0, 8], "taj": false, "p": 0}, {"d": "down", "c": [[11, 8], [12, 8], [13, 8]], "a": [10, 8], "taj": false, "p": 0}, {"d": "down", "c": [[16, 8], [17, 8], [18, 8], [19, 8]], "a": [15, 8], "taj": false, "p": 0}, {"d": "down", "c": [[1, 9], [2, 9], [3, 9], [4, 9], [5, 9], [6, 9], [7, 9]], "a": [0, 9], "taj": false, "p": 0}, {"d": "down", "c": [[9, 9], [10, 9]], "a": [8, 9], "taj": false, "p": 1}, {"d": "down", "c": [[12, 9], [13, 9], [14, 9]], "a": [11, 9], "taj": false, "p": 0}, {"d": "down", "c": [[16, 9], [17, 9], [18, 9], [19, 9]], "a": [15, 9], "taj": false, "p": 1}, {"d": "down", "c": [[2, 10], [3, 10], [4, 10], [5, 10], [6, 10], [7, 10], [8, 10], [9, 10]], "a": [1, 10], "taj": false, "p": 1}, {"d": "down", "c": [[11, 10], [12, 10]], "a": [10, 10], "taj": false, "p": 1}, {"d": "down", "c": [[14, 10], [15, 10]], "a": [13, 10], "taj": false, "p": 1}, {"d": "down", "c": [[17, 10], [18, 10], [19, 10]], "a": [16, 10], "taj": false, "p": 1}, {"d": "down", "c": [[1, 11], [2, 11], [3, 11], [4, 11]], "a": [0, 11], "taj": false, "p": 0}, {"d": "down", "c": [[6, 11], [7, 11], [8, 11], [9, 11], [10, 11]], "a": [5, 11], "taj": false, "p": 0}, {"d": "down", "c": [[13, 11], [14, 11], [15, 11], [16, 11], [17, 11], [18, 11], [19, 11]], "a": [12, 11], "taj": false, "p": 0}, {"d": "down", "c": [[1, 12], [2, 12], [3, 12], [4, 12], [5, 12]], "a": [0, 12], "taj": false, "p": 0}, {"d": "down", "c": [[8, 12], [9, 12], [10, 12], [11, 12], [12, 12], [13, 12]], "a": [7, 12], "taj": false, "p": 0}, {"d": "down", "c": [[15, 12], [16, 12], [17, 12], [18, 12], [19, 12]], "a": [14, 12], "taj": false, "p": 0}], "tajenka": ["NAPSALSINA", "TOPROGRAM"], "pomucka": ["astat", "aula", "blokace", "chrt", "covid", "lýtko", "mšice", "nakrást", "obklusat", "otop", "rybák", "smírčí", "stavící", "tester", "vrčet", "zmoci"], "stats": {"letter_cells": 182, "crossed": 165, "interlock_pct": 90.7, "words": 81}, "missing": [], "number": "1", "tajenka_text": "NAPSAL SI NA TO PROGRAM", "zadani_html": "Tomáš Kapler si postěžoval, že když nechá jazykové modely sestavit českou křížovku, je to „dost tragédie“ — model přece nevidí písmena, jen tokeny. Má pravdu: tuhle mřížku žádný model neskládal v hlavě. Vznikla tak, že si <span class=\"gap\">… (1. a 2. díl tajenky) …</span>", "colophon_html": "Slova: <code>hunspell cs_CZ</code>, 132 tisíc českých tvarů, bez diakritiky a s CH v jednom políčku podle křížovkářské konvence. Pořadí podle frekvence z korpusu filmových titulků, aby se do mřížky dostávala slova, která luštitel zná. Mřížku složil backtracking s heuristikou nejtěsnějšího slotu; tajenka se pokládala první. Legendy psal jazykový model až nad hotovou mřížkou — to je jediná část, kterou opravdu umí. Výsledek pak kontroloval samostatný skript, který si všechna slova přepočítal znovu proti slovníku.", "facts": [{"k": "Rozměr", "v": "13 × 20", "note": "182 písmenných políček"}, {"k": "Slov v mřížce", "v": "81", "note": "mřížku složil solver, legendy psal model"}, {"k": "Úplné křižování", "v": "90.7 %", "note": "písmen zapojených do dvou slov naráz"}, {"k": "Slovník", "v": "165 tis.", "note": "českých tvarů, řazeno podle frekvence"}]}</script>
+<script>
+(function () {
+  "use strict";
+  const DATA = JSON.parse(document.getElementById("krizovka-data").textContent);
+  const W = DATA.width, H = DATA.height, SLOTS = DATA.slots;
+  const board = document.getElementById("board");
+  board.style.gridTemplateColumns = "repeat(" + W + ", var(--cell))";
+
+  const inputs = new Map();     // "r,c" -> input
+  const cellEl = new Map();     // "r,c" -> .cell
+  const solution = new Map();   // "r,c" -> správný znak
+  const cellWords = new Map();  // "r,c" -> [index slotu, ...]
+  const clueEls = [];           // index slotu -> .clue
+  const tajCells = [];
+  const ARROW = { right: "▶", down: "▼" };
+
+  DATA.cells.forEach(function (row, r) {
+    row.forEach(function (cell, c) {
+      const key = r + "," + c;
+      const el = document.createElement("div");
+      el.className = "cell " + (cell.t === "legend" ? "legend" : "letter");
+      el.dataset.key = key;
+
+      if (cell.t === "legend") {
+        if (!cell.clues.length) el.classList.add("blind");
+        if (cell.clues.length > 1) el.classList.add("two");
+        cell.clues.forEach(function (clue) {
+          const d = document.createElement("div");
+          d.className = "clue" + (clue.tajenka ? " taj" : "");
+          d.textContent = clue.text;
+          d.tabIndex = 0;
+          d.setAttribute("role", "button");
+          d.dataset.slot = clue.slot;
+          const a = document.createElement("span");
+          a.className = "arrow " + clue.arrow;
+          a.textContent = ARROW[clue.arrow];
+          d.appendChild(a);
+          el.appendChild(d);
+          clueEls[clue.slot] = d;
+        });
+      } else {
+        solution.set(key, cell.s);
+        cellWords.set(key, cell.w || []);
+        if (cell.k !== null && cell.k !== undefined) {
+          el.classList.add("taj");
+          tajCells.push({ key: key, part: cell.k });
+        }
+        const inp = document.createElement("input");
+        inp.type = "text";
+        inp.maxLength = 2;
+        inp.autocomplete = "off";
+        inp.autocapitalize = "characters";
+        inp.spellcheck = false;
+        inp.setAttribute("aria-label", "řádek " + (r + 1) + ", sloupec " + (c + 1));
+        inp.dataset.key = key;
+        el.appendChild(inp);
+        inputs.set(key, inp);
+      }
+      cellEl.set(key, el);
+      board.appendChild(el);
+    });
+  });
+
+  // ---- výběr slova a směru ------------------------------------------------
+  // Rozhoduje se podle toho, které slovo v políčku ZAČÍNÁ, ne kterými slovy
+  // políčko prochází. Luštitel kliká na první písmeno po definici, a tam je
+  // směr skoro vždycky jednoznačný: v téhle mřížce začíná 65 políček právě
+  // jedno slovo a jen 8 jsou rohy, kde začínají dvě naráz.
+  let activeSlot = null;
+  let activeCell = null;
+
+  function keyOf(cell) { return cell[0] + "," + cell[1]; }
+
+  const startsHere = new Map();   // "r,c" -> [indexy slov, která tu začínají]
+  SLOTS.forEach(function (s, i) {
+    const k = keyOf(s.c[0]);
+    if (!startsHere.has(k)) startsHere.set(k, []);
+    startsHere.get(k).push(i);
+  });
+
+  function preferDir(list) {
+    const dir = activeSlot !== null ? SLOTS[activeSlot].d : "right";
+    const same = list.find(function (s) { return SLOTS[s].d === dir; });
+    return same !== undefined ? same : list[0];
+  }
+
+  function selectSlot(si, key) {
+    activeSlot = si;
+    activeCell = key || keyOf(SLOTS[si].c[0]);
+    paint();
+    const inp = inputs.get(activeCell);
+    if (inp) { inp.focus({ preventScroll: false }); inp.select(); }
+  }
+
+  function selectCell(key, toggle) {
+    const ss = cellWords.get(key) || [];
+    if (!ss.length) return;
+    const st = startsHere.get(key) || [];
+    let target;
+    if (toggle && activeCell === key && ss.length > 1) {
+      // opakovaný klik na totéž políčko přepne na kolmé slovo
+      target = ss.find(function (s) { return s !== activeSlot; });
+      if (target === undefined) target = ss[0];
+    } else if (st.length === 1) {
+      target = st[0];              // začíná tu jediné slovo, o směru není spor
+    } else if (st.length > 1) {
+      target = preferDir(st);      // roh: začínají dvě, drž dosavadní směr
+    } else {
+      target = preferDir(ss);      // políčko uprostřed slova
+    }
+    activeSlot = target;
+    activeCell = key;
+    paint();
+  }
+
+  function paint() {
+    board.querySelectorAll(".cell.in-word").forEach(function (e) {
+      e.classList.remove("in-word");
+    });
+    board.querySelectorAll(".cell.here").forEach(function (e) {
+      e.classList.remove("here");
+    });
+    clueEls.forEach(function (e) { if (e) e.classList.remove("on"); });
+    if (activeSlot === null) return;
+    SLOTS[activeSlot].c.forEach(function (cell) {
+      const el = cellEl.get(keyOf(cell));
+      if (el) el.classList.add("in-word");
+    });
+    const cur = cellEl.get(activeCell);
+    if (cur) cur.classList.add("here");
+    const cl = clueEls[activeSlot];
+    if (cl) cl.classList.add("on");
+  }
+
+  function posInSlot(si, key) {
+    const cells = SLOTS[si].c;
+    for (let i = 0; i < cells.length; i++) if (keyOf(cells[i]) === key) return i;
+    return -1;
+  }
+
+  function stepInSlot(back) {
+    if (activeSlot === null) return null;
+    const i = posInSlot(activeSlot, activeCell);
+    const next = SLOTS[activeSlot].c[i + (back ? -1 : 1)];
+    return next ? keyOf(next) : null;
+  }
+
+  function goTo(key) {
+    if (!key || !inputs.has(key)) return;
+    activeCell = key;
+    paint();
+    const inp = inputs.get(key);
+    inp.focus();
+    inp.select();
+  }
+
+  // ---- vstup --------------------------------------------------------------
+  const DEACC = { "Á":"A","Č":"C","Ď":"D","É":"E","Ě":"E","Í":"I","Ň":"N","Ó":"O",
+                  "Ř":"R","Š":"S","Ť":"T","Ú":"U","Ů":"U","Ý":"Y","Ž":"Z" };
+  function deaccent(s) {
+    return s.replace(/[ÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ]/g, function (ch) { return DEACC[ch]; });
+  }
+  function clearMark(key) {
+    const el = cellEl.get(key);
+    if (el) el.classList.remove("wrong", "right");
+  }
+
+  board.addEventListener("mousedown", function (e) {
+    const clue = e.target.closest(".clue");
+    if (clue) {
+      e.preventDefault();
+      selectSlot(Number(clue.dataset.slot));
+      return;
+    }
+    const cell = e.target.closest(".cell.letter");
+    if (cell) {
+      e.preventDefault();
+      selectCell(cell.dataset.key, true);
+      const inp = inputs.get(cell.dataset.key);
+      if (inp) { inp.focus(); inp.select(); }
+    }
+  });
+
+  board.addEventListener("keydown", function (e) {
+    const clue = e.target.closest(".clue");
+    if (clue && (e.key === "Enter" || e.key === " ")) {
+      e.preventDefault();
+      selectSlot(Number(clue.dataset.slot));
+      return;
+    }
+    const inp = e.target.closest("input");
+    if (!inp) return;
+    const key = inp.dataset.key;
+
+    if (e.key === " ") {                       // přepnout na kolmé slovo
+      e.preventDefault();
+      selectCell(key, true);
+      return;
+    }
+    const nav = { ArrowRight: [0, 1], ArrowLeft: [0, -1],
+                  ArrowDown: [1, 0], ArrowUp: [-1, 0] };
+    if (nav[e.key]) {
+      e.preventDefault();
+      const parts = key.split(",");
+      let r = Number(parts[0]), c = Number(parts[1]);
+      for (let i = 0; i < Math.max(W, H); i++) {
+        r += nav[e.key][0]; c += nav[e.key][1];
+        if (r < 0 || c < 0 || r >= H || c >= W) return;
+        const k = r + "," + c;
+        if (inputs.has(k)) {
+          const want = (e.key === "ArrowRight" || e.key === "ArrowLeft") ? "right" : "down";
+          const ss = cellWords.get(k) || [];
+          const match = ss.find(function (s) { return SLOTS[s].d === want; });
+          if (match !== undefined) { activeSlot = match; }
+          goTo(k);
+          return;
+        }
+      }
+      return;
+    }
+    if (e.key === "Backspace" && !inp.value) {
+      e.preventDefault();
+      const prev = stepInSlot(true);
+      if (prev) { inputs.get(prev).value = ""; clearMark(prev); goTo(prev); syncTajenka(); }
+    }
+  });
+
+  let lastTyped = null;
+  board.addEventListener("input", function (e) {
+    const inp = e.target;
+    if (inp.tagName !== "INPUT") return;
+    let v = deaccent(inp.value.toUpperCase()).replace(/[^A-Z]/g, "");
+
+    // CH do jednoho políčka: H hned po C se sloučí zpátky do minulého políčka
+    if (v === "H" && lastTyped && lastTyped !== inp.dataset.key) {
+      const prev = inputs.get(lastTyped);
+      if (prev && prev.value === "C") {
+        prev.value = "CH";
+        inp.value = "";
+        clearMark(lastTyped);
+        goTo(lastTyped);
+        syncTajenka();
+        return;
+      }
+    }
+    if (v.length > 1 && v !== "CH") v = v.slice(-1);
+    inp.value = v;
+    clearMark(inp.dataset.key);
+    syncTajenka();
+    if (v) {
+      lastTyped = inp.dataset.key;
+      if (v !== "C") {
+        const next = stepInSlot(false);
+        if (next) goTo(next);
+      }
+    }
+  });
+
+  // ---- tajenka ------------------------------------------------------------
+  const tajBoxes = [];
+  const tajWrap = document.getElementById("taj-cells");
+  DATA.tajenka.forEach(function (part, pi) {
+    tajCells.filter(function (t) { return t.part === pi; }).forEach(function (t) {
+      const b = document.createElement("div");
+      b.className = "taj-box";
+      tajWrap.appendChild(b);
+      tajBoxes.push({ box: b, key: t.key });
+    });
+    if (pi < DATA.tajenka.length - 1) {
+      const sp = document.createElement("div");
+      sp.className = "taj-box space";
+      tajWrap.appendChild(sp);
+    }
+  });
+  function syncTajenka() {
+    tajBoxes.forEach(function (t) { t.box.textContent = inputs.get(t.key).value; });
+  }
+
+  // ---- tlačítka -----------------------------------------------------------
+  const status = document.getElementById("status");
+  function say(msg, kind) {
+    status.textContent = msg;
+    status.className = "status" + (kind ? " " + kind : "");
+  }
+
+  document.getElementById("btn-check").addEventListener("click", function () {
+    let filled = 0, wrong = 0;
+    inputs.forEach(function (inp, key) {
+      const el = cellEl.get(key);
+      el.classList.remove("wrong", "right");
+      if (!inp.value) return;
+      filled++;
+      if (inp.value === solution.get(key)) el.classList.add("right");
+      else { el.classList.add("wrong"); wrong++; }
+    });
+    if (!filled) say("Zatím prázdno. Začněte kterýmkoli políčkem.", null);
+    else if (wrong) say(wrong + " z " + filled + " vyplněných políček nesedí.", "err");
+    else if (filled < inputs.size) say("Zatím vše sedí — zbývá " + (inputs.size - filled) + " políček.", "ok");
+    else say("Hotovo, celá křížovka sedí.", "ok");
+  });
+
+  document.getElementById("btn-clear").addEventListener("click", function () {
+    inputs.forEach(function (inp, key) { inp.value = ""; clearMark(key); });
+    syncTajenka();
+    say("Vymazáno.", null);
+  });
+
+  document.getElementById("btn-reveal").addEventListener("click", function () {
+    inputs.forEach(function (inp, key) { inp.value = solution.get(key); clearMark(key); });
+    syncTajenka();
+    say("Tajenka: " + DATA.tajenka_text, "ok");
+  });
+
+  document.getElementById("btn-print").addEventListener("click", function () { window.print(); });
+
+  // ---- velikost mřížky ----------------------------------------------------
+  // Legendy jsou drobné a každá obrazovka je jiná, tak ať si to čtenář nastaví.
+  const SIZES = [38, 44, 50, 56, 64, 72, 80, 90];
+  const LEGEND_AT = { 38: 6.8, 44: 7.6, 50: 8.4, 56: 9.2, 64: 10, 72: 11, 80: 12, 90: 13.5 };
+  let sizeIx = 4;
+  try {
+    const saved = localStorage.getItem("krizovka-size");
+    if (saved !== null && SIZES[Number(saved)]) sizeIx = Number(saved);
+  } catch (err) { /* soukromé okno, jede se s výchozí velikostí */ }
+
+  function applySize() {
+    const px = SIZES[sizeIx];
+    document.documentElement.style.setProperty("--cell", px + "px");
+    document.documentElement.style.setProperty("--legend-size", LEGEND_AT[px] + "px");
+    try { localStorage.setItem("krizovka-size", String(sizeIx)); } catch (err) { /* nevadí */ }
+    document.getElementById("btn-smaller").disabled = sizeIx === 0;
+    document.getElementById("btn-bigger").disabled = sizeIx === SIZES.length - 1;
+  }
+  document.getElementById("btn-smaller").addEventListener("click", function () {
+    if (sizeIx > 0) { sizeIx--; applySize(); }
+  });
+  document.getElementById("btn-bigger").addEventListener("click", function () {
+    if (sizeIx < SIZES.length - 1) { sizeIx++; applySize(); }
+  });
+  applySize();
+
+  // ---- texty a čísla ------------------------------------------------------
+  document.getElementById("puzzle-num").textContent = DATA.number || "1";
+  document.getElementById("zadani-text").innerHTML = DATA.zadani_html;
+  document.getElementById("colophon").innerHTML = DATA.colophon_html;
+
+  const facts = document.getElementById("facts");
+  DATA.facts.forEach(function (f) {
+    const d = document.createElement("div");
+    d.className = "fact";
+    d.innerHTML = "<dt>" + f.k + "</dt><dd>" + f.v + "<small>" + f.note + "</small></dd>";
+    facts.appendChild(d);
+  });
+
+  const pom = document.getElementById("pomucka");
+  if (DATA.pomucka && DATA.pomucka.length) {
+    pom.innerHTML = "<b>Pomůcka:</b> " + DATA.pomucka.join(", ") + ".";
+  } else {
+    pom.remove();
+  }
+
+  syncTajenka();
+})();
+</script>

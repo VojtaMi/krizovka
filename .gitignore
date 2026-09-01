@@ -1,0 +1,26 @@
+# --- generované, jde přepočítat ------------------------------------------
+# 11 MB, vzniká z hunspellu + frekvenčního seznamu: python3 src/build_dict.py
+data/words.json
+# mezikrok mezi solverem a šablonou: python3 src/make_page.py
+data/view.json
+
+# --- cizí data, stahuje se ------------------------------------------------
+# 644 kB z hermitdave/FrequencyWords, URL je v src/build_dict.py
+data/cs_50k.txt
+
+# --- pracovní zbytky ------------------------------------------------------
+data/test_small.json
+data/grid_backup_95.json
+data/grid_ok_907.json
+data/grid_b.json
+data/grid_common.json
+web/_debug.html
+shot*.png
+diag*.png
+dom.html
+
+# --- Python ---------------------------------------------------------------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
