@@ -779,10 +779,18 @@
   picker.hidden = DATA.puzzles.length < 2;
   picker.addEventListener("change", function () { loadPuzzle(Number(picker.value)); });
 
-  let start = 0;
+  // Výchozí je nejnovější křížovka. Dřív se startovalo od nuly, takže
+  // vizuální kontrola po --add ukazovala tu první — a vypadala přitom
+  // jako úspěšná kontrola té nové.
+  let start = DATA.puzzles.length - 1;
   try {
-    const saved = Number(localStorage.getItem("krizovka-ix"));
-    if (saved >= 0 && saved < DATA.puzzles.length) start = saved;
+    // Pozor na Number(null) === 0: chybějící klíč se jinak tváří jako
+    // uložená volba "první křížovka" a přebije výchozí nejnovější.
+    const raw = localStorage.getItem("krizovka-ix");
+    const saved = raw === null ? NaN : Number(raw);
+    if (Number.isInteger(saved) && saved >= 0 && saved < DATA.puzzles.length) {
+      start = saved;
+    }
   } catch (err) { /* soukromé okno */ }
   picker.value = String(start);
   loadPuzzle(start);

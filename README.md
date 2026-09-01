@@ -16,9 +16,10 @@ dělal ten, kdo na ni má:
 
 ```bash
 python3 src/solve.py --width 13 --height 20 --tajenka "PRVNIDIL,DRUHYDIL" \
-    --seconds 700 --patterns 1600 --keep 30 --per-attempt 9 --nodes 42000
+    --seconds 300 --patterns 6000 --max-rank 100000
 python3 src/verify.py --words   # kontrola + výpis slov k pročištění
-python3 src/make_page.py        # + data/clues.json -> web/krizovka.html
+python3 src/make_page.py        # hlásí, které legendy chybí
+python3 src/make_page.py --add  # uloží hotovou křížovku do zásobníku
 ```
 
 `build_dict.py` se spouští sám, když je slovník starší než blacklist.
@@ -44,12 +45,8 @@ pořád na ten nejtěžší a vyčerpat rozpočet. Proto se z horního pásma
 
 | přepínač | co dělá |
 |---|---|
-| `--patterns` | kolik vzorů mřížky vygenerovat a ohodnotit křižováním |
-| `--band` | jak velké horní pásmo vzorů se před výběrem zamíchá |
-| `--per-attempt`, `--nodes` | strop času a uzlů na jeden vzor |
-| `--keep` | kolik hotových mřížek vyrobit, než se vybere nejlepší |
-| `--max-rank` | strop vzácnosti slov (nižší = běžnější slova, těžší fill) |
-| `--allow-corpus` | povolit ohnuté tvary z titulků; nese s sebou smetí |
+Přepínače neměň, jsou vyladěné měřením. Postup pro novou křížovku je
+ve skillu `.claude/skills/krizovka/`.
 
 ## Kvalita slovníku
 

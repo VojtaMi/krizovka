@@ -11,13 +11,18 @@ přímo v odpovědi — vidíš tokeny, ne znaky, a vyjde nesmysl.
 ## Postup
 
 **1. Rozděl tajenku a uprav `data/meta.json`.**
-Každý díl musí být kratší než šířka mřížky (13 sloupců → pohodlně 10 znaků;
-solver delší odmítne). Dělení vybíráš ty, podle smyslu: `KDOSIHRAJE`/`NEZLOBI`
-dělí přísloví na čárce, `KDOSIHRA`/`JENEZLOBI` splňuje stejná formální
-pravidla a v odkrytí čte jako nesmysl.
 
-V `meta.json` přepiš `title`, `number`, `tajenka_text` a `zadani_html`.
-**Zůstane-li od minulé křížovky, vyjde stránka s cizím zadáním.**
+**Díl smí mít nejvýš 10 znaků** (u šířky 13). Dílů může být kolik potřebuješ,
+nejen dva — dvacetiznaková tajenka se na dva nevejde a chce tři.
+
+Dělení vybíráš ty, podle smyslu: `KDOSIHRAJE`/`NEZLOBI` dělí přísloví na
+čárce, `KDOSIHRA`/`JENEZLOBI` splňuje stejná formální pravidla a v odkrytí
+čte jako nesmysl.
+
+V `meta.json` přepiš `title`, `tajenka_text`, `zadani_html` a `colophon_html`
+(ten drží počet slov ve slovníku — po přegenerování nesouhlasí s panelem na
+stránce). `number` neřeš, přepíše ho krok 6.
+**Zůstane-li meta.json od minulé křížovky, vyjde stránka s cizím zadáním.**
 
 **2. Spusť solver.**
 
@@ -33,25 +38,24 @@ smetí žije právě tam**, odpadá tím většina ručního čištění. Namě�
 | | plný slovník | `--max-rank 100000` |
 |---|---|---|
 | vzácná slova v mřížce | 16–25 | **0** |
-| legend k napsání | 56 | **43** |
+| legend k napsání ze 132 tis. slovníku | 56 | 44 |
 | kola čištění blacklistu | 2–11 | zpravidla žádné |
 | křižování | 90–93 % | ~90 % |
-| běh solveru | ~25 s | ~4 min |
+| běh solveru | ~25 s | 1,5–2 min |
 
-Čtyři minuty navíc ušetří třináct legend i celá kola čištění. Bez něj se do
-křížovky dostanou hesla jako `IPSACE` nebo `ESESMAN` — slovníkově regulérní,
-takže je filtr vulgarismů nechytí.
+Bez něj se do křížovky dostanou hesla jako `IPSACE` nebo `ESESMAN` —
+slovníkově regulérní, takže je filtr vulgarismů nechytí. (Menší počet legend
+je z větší části zásluha rostoucí `clues.json`, ne jen tohohle přepínače.)
 
-Pozor: s takhle malým slovníkem projdou jen řidší vzory, takže solver
-potřebuje víc času a víc vzorů. Na 90 sekundách neuspěje vůbec.
+Pozor: s takhle malým slovníkem projdou jen řidší vzory, takže je potřeba
+hodně `--patterns`. Křižování vychází o pár bodů níž než s plným slovníkem.
 
-Slovník se dogeneruje sám, když je zastaralý. Počet paralelních hledání si
-solver zvolí podle volných jader. Defaulty jsou vyladěné a podložené
-měřením — neupravuj je naslepo, zvlášť `--nodes`, `--band` a `--keep`.
-Zvyšovat `--keep` se nevyplácí: osmá mřížka zachytí prakticky celý užitek,
-třicátá koupí jedno slovo za trojnásobek času. A hlavně nezvyšuj `--nodes`:
-84 % vzorů se zaplnit nedá a na nich se strop vyplýtvá celý. Naměřeno
-8–10 mřížek za 90 s při 2500 uzlech, ale jen dvě při 42000.
+Trvá jednotky minut a skončí sám, jakmile má dost mřížek. Slovník se
+dogeneruje sám, když je zastaralý (potřebuje systémový `hunspell cs_CZ`).
+Ostatní přepínače neměň, jsou vyladěné měřením.
+
+Když křižování vyjde nízké, **zkus jiný `--seed`** — při stejném slovníku je
+běh deterministický, takže bez něj dostaneš totéž.
 
 **3. Projdi umístěná slova.**
 
@@ -62,21 +66,26 @@ python3 src/verify.py --words
 Verifikátor musí projít, jinak nepokračuj. Pak si přečti výpis slov a
 vyhoď, co nejde vysvětlit legendou → `data/blacklist.txt` → zpět na krok 2.
 
-S `--max-rank` bývá tenhle krok bez nálezu a jde se dál. Bez něj smyčka
+S `--max-rank` tu obvykle není smetí, ale **vkusový soud pořád musíš udělat** —
+filtry chytají hrubé případy, ne to, že se heslo nehodí k *téhle* tajence.
+Počítej s tím, že mřížka po blacklistu může vyjít **horší**; když se to
+stane, vrať se k předchozí. Bez `--max-rank` smyčka
 **nekonverguje** — každá nová mřížka nabere čerstvé smetí a dvě nezávislá
 měření skončila na osmi a jedenácti kolech, ne na dvou. Když se do třetího
 kola pořád objevuje smetí, nesnaž se ho vyblacklistovat; sniž `--max-rank`.
 
-**4. Napiš legendy** do `data/clues.json` ke každému heslu z výpisu.
-
-**5. Postav stránku a zkontroluj hlášení.**
+**4. Zjisti, které legendy chybí.**
 
 ```bash
 python3 src/make_page.py
 ```
 
-Hlásí chybějící legendy, příliš dlouhé legendy a nesoulad `meta.json`
-s tajenkou. Všechno oprav a spusť znovu.
+Vypíše `CHYBÍ LEGENDA: …` — a **jen ty piš**. `data/clues.json` je společná
+databáze, která roste s každou křížovkou, takže velká část hesel legendu už
+má. Psát je podle výpisu z kroku 3 znamená napsat je zbytečně dvakrát.
+
+**5. Napiš chybějící legendy** do `data/clues.json`, pak spusť `make_page.py`
+znovu. Hlásí i příliš dlouhé legendy a nesoulad `meta.json` s tajenkou.
 
 **6. Ulož křížovku do zásobníku**, až je čistá:
 
@@ -91,10 +100,12 @@ nepovedená generace nemůže zničit hotovou.
 
 ## Legendy
 
-Rozpočet na políčko, jinak se text ořízne:
+**Piš do 28 znaků a máš pokoj.** Políčko s jedinou definicí unese 45, ale
+kolik definic které políčko ponese, se dozvíš až po `make_page.py`.
 
-- **jedna definice v políčku: ~45 znaků**
-- **dvě definice: ~28 znaků na každou**
+**Než začneš, přečti si pár existujících legend v `clues.json`** a drž se
+jejich stylu. Ušetří to víc času než cokoliv jiného v tomhle návodu —
+najdeš tam i vzory pro těžké případy (`ZES` → „spojka že jsi“).
 
 Konvence: zkratky uváděj typem (`chem. zn. telluru`), ohnuté tvary pádem
 (`4. p. j. č. od pes`), u setřených tvarů definuj obě čtení naráz
