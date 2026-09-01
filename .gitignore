@@ -25,3 +25,4 @@ venv/
 
 # zbytky po pokusu o worktree izolaci
 .claude/worktrees/
+.rostistate
