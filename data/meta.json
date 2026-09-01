@@ -1,4 +1,5 @@
 {
+  "title": "Křížovka pro Kaplera",
   "number": "1",
   "tajenka_text": "NAPSAL SI NA TO PROGRAM",
   "zadani_html": "Tomáš Kapler si postěžoval, že když nechá jazykové modely sestavit českou křížovku, je to „dost tragédie“ — model přece nevidí písmena, jen tokeny. Má pravdu: tuhle mřížku žádný model neskládal v hlavě. Vznikla tak, že si <span class=\"gap\">… (1. a 2. díl tajenky) …</span>",

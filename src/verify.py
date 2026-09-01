@@ -15,6 +15,7 @@ Kontroluje:
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -63,13 +64,48 @@ def runs_in(grid, w, h, direction):
     return out
 
 
+RARE_RANK = 200_000
+
+
+def report_words(data: dict) -> None:
+    """Vypíše umístěná slova podle vzácnosti — podklad pro čištění blacklistu.
+
+    Tohle je jediný krok pipeline, který nejde zautomatizovat: rozhodnout,
+    jestli jde ke slovu napsat legenda, umí zatím jen člověk nebo model.
+    """
+    rows = []
+    for slot in data["slots"]:
+        if slot.get("label"):
+            continue
+        rank = slot.get("rank") or 0
+        tag = "VÝPLŇ " if slot.get("clue") else ("vzácné" if rank >= RARE_RANK else "běžné")
+        rows.append((len(slot["word"]), slot["word"],
+                     "/".join(slot.get("src", [])[:2]), tag))
+    rows.sort()
+    print(f"\numístěná slova ({len(rows)}), seřazeno podle délky:")
+    print("  projdi je očima; co nejde vysvětlit legendou, patří do "
+          "data/blacklist.txt")
+    for n, word, src, tag in rows:
+        print(f"  {tag}  {word:<11} {src}")
+    rare = sum(1 for r in rows if r[3] == "vzácné")
+    print(f"\n  z toho vzácných: {rare} — ta půjdou do Pomůcky")
+
+
 def main() -> int:
-    path = Path(sys.argv[1] if len(sys.argv) > 1 else ROOT / "data" / "grid.json")
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    want_words = "--words" in sys.argv
+    path = Path(args[0] if args else ROOT / "data" / "grid.json")
     data = json.loads(path.read_text(encoding="utf-8"))
     w, h = data["width"], data["height"]
     grid = [list(row) for row in data["grid"]]
     letters = {tuple(int(x) for x in k.split(",")): v
                for k, v in data["letters"].items()}
+
+    words_path = ROOT / "data" / "words.json"
+    stale = False
+    if data.get("dict_sha"):
+        now = hashlib.sha1(words_path.read_bytes()).hexdigest()[:16]
+        stale = now != data["dict_sha"]
 
     lexicon = set(json.loads(
         (ROOT / "data" / "words.json").read_text(encoding="utf-8"))["words"])
@@ -169,12 +205,18 @@ def main() -> int:
         print(f"\nvarování ({len(warnings)}):")
         for m in warnings:
             print(f"  ! {m}")
+    if stale:
+        print("\nPOZOR: slovník se od vyřešení mřížky změnil.")
+        print("  Chyby 'není ve slovníku' níže nejspíš znamenají, že jsi slovo")
+        print("  zablacklistoval až po vyřešení. Pusť solver znovu.")
     if errors:
         print(f"\nCHYBY ({len(errors)}):")
         for m in errors[:40]:
             print(f"  x {m}")
         return 1
     print("\nOK — mřížka je konzistentní.")
+    if want_words:
+        report_words(data)
     return 0
 
 

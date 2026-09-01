@@ -17,9 +17,11 @@ zbytek mřížky musí vejít.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import heapq
 import json
 import random
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -404,6 +406,38 @@ def interlock_stats(grid, w, h, slots):
     return len(letters), crossed
 
 
+def dictionary_fingerprint() -> str:
+    """Otisk slovníku, se kterým mřížka vznikla.
+
+    Verifikátor podle něj pozná, že se slovník od vyřešení změnil, a řekne
+    to rovnou — místo aby vypsal seznam slov, která "nejsou ve slovníku".
+    """
+    return hashlib.sha1(WORDS.read_bytes()).hexdigest()[:16]
+
+
+def ensure_dictionary() -> None:
+    """Přegeneruje slovník, když je starší než jeho vstupy.
+
+    Bez tohohle je snadné upravit blacklist, zapomenout na build_dict.py a
+    divit se, proč vyhozené slovo pořád leze do mřížky.
+    """
+    words = ROOT / "data" / "words.json"
+    sources = [ROOT / "data" / "blacklist.txt", ROOT / "src" / "build_dict.py"]
+    present = [p for p in sources if p.exists()]
+    if words.exists() and all(
+            words.stat().st_mtime >= p.stat().st_mtime for p in present):
+        return
+    why = "chybí" if not words.exists() else "je starší než blacklist"
+    print(f"slovník {why}, generuji znovu...", file=sys.stderr)
+    result = subprocess.run(
+        [sys.executable, str(ROOT / "src" / "build_dict.py")],
+        capture_output=True, text=True)
+    sys.stderr.write(result.stdout)
+    if result.returncode != 0:
+        sys.stderr.write(result.stderr)
+        raise SystemExit("build_dict.py selhal")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--width", type=int, default=13)
@@ -413,7 +447,9 @@ def main() -> int:
     ap.add_argument("--max-run", type=int, default=8)
     ap.add_argument("--max-rank", type=int, default=UNKNOWN_RANK)
     ap.add_argument("--seconds", type=float, default=120.0)
-    ap.add_argument("--attempts", type=int, default=60)
+    ap.add_argument("--attempts", type=int, default=None,
+                    help="strop pokusů; ve výchozím stavu se projdou všechny "
+                         "vzory, dokud nedojde čas nebo --keep")
     ap.add_argument("--per-attempt", type=float, default=15.0,
                     help="sekund na jeden vzor, než se jde na další")
     ap.add_argument("--nodes", type=int, default=60_000,
@@ -433,6 +469,15 @@ def main() -> int:
     args = ap.parse_args()
 
     parts = [p.strip().upper() for p in args.tajenka.split(",") if p.strip()]
+    # Běh tajenky začíná ve sloupci 1, takže se do řádku musí vejít i s ním.
+    for part in parts:
+        n = len(to_glyphs(part))
+        if n > args.width - 1:
+            raise SystemExit(
+                f"díl tajenky {part!r} má {n} znaků, do šířky {args.width} se "
+                f"nevejde (strop je {args.width - 1}, pohodlně {args.width - 3}). "
+                f"Rozděl tajenku na víc dílů.")
+    ensure_dictionary()
     lex = Lexicon(WORDS, args.max_rank, ROOT / "data" / "extras.json",
                   allow_corpus=args.allow_corpus)
     print(f"slovník: {sum(len(v) for v in lex.by_len.values())} forem "
@@ -473,7 +518,10 @@ def main() -> int:
               f"{patterns[0][0] * 100:.0f} % / nejhorší {patterns[-1][0] * 100:.0f} %",
               file=sys.stderr)
 
-    for attempt, (ratio, grid, slots, _t, _c) in enumerate(patterns[:args.attempts]):
+    # Dřív tu byl default --attempts 60, který tiše přebíjel --keep i --seconds:
+    # při úspěšnosti fillu ~1:34 doběhl běh po pěti mřížkách místo třiceti.
+    limit = args.attempts if args.attempts is not None else len(patterns)
+    for attempt, (ratio, grid, slots, _t, _c) in enumerate(patterns[:limit]):
         if time.monotonic() > deadline:
             break
 
@@ -510,6 +558,7 @@ def main() -> int:
           f"neznámých hesel {_score[0]} (z {solved} hotových mřížek)",
           file=sys.stderr)
     out = {
+        "dict_sha": dictionary_fingerprint(),
         "width": args.width,
         "height": args.height,
         "tajenka": parts,
@@ -548,12 +597,21 @@ def meta(lex: Lexicon, word: tuple[str, ...]):
 
 
 def pick_tajenka_rows(h: int, parts, rng: random.Random) -> list[int]:
-    """Rozmístí díly tajenky do horní a dolní třetiny, ať jsou od sebe."""
-    zones = [(2, h // 2 - 2), (h // 2 + 1, h - 3)]
+    """Každý díl tajenky do vlastního pásma, ať dva nepadnou na týž řádek.
+
+    Dřív tu byla natvrdo dvě pásma, která se cyklila — tři a víc dílů se
+    tak mohly potkat v jednom řádku a vzor pak nešel použít.
+    """
+    lo, hi = 2, h - 3
+    n = len(parts)
+    if hi - lo + 1 < n:
+        raise SystemExit(f"mřížka vysoká {h} řádků neunese {n} dílů tajenky")
+    band = (hi - lo + 1) / n
     rows = []
-    for i, _ in enumerate(parts):
-        lo, hi = zones[i % len(zones)]
-        rows.append(rng.randint(lo, max(lo, hi)))
+    for i in range(n):
+        a = lo + int(i * band)
+        b = lo + int((i + 1) * band) - 1
+        rows.append(rng.randint(a, max(a, b)))
     return rows
 
 

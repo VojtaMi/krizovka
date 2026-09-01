@@ -15,11 +15,15 @@ dělal ten, kdo na ni má:
 ## Pipeline
 
 ```bash
-python3 src/build_dict.py     # hunspell + korpus -> data/words.json
-python3 src/solve.py          # -> data/grid.json
-python3 src/verify.py         # nezávislá kontrola mřížky
-python3 src/make_page.py      # + data/clues.json -> web/krizovka.html
+python3 src/solve.py --width 13 --height 20 --tajenka "PRVNIDIL,DRUHYDIL" \
+    --seconds 700 --patterns 1600 --keep 30 --per-attempt 9 --nodes 42000
+python3 src/verify.py --words   # kontrola + výpis slov k pročištění
+python3 src/make_page.py        # + data/clues.json -> web/krizovka.html
 ```
+
+`build_dict.py` se spouští sám, když je slovník starší než blacklist.
+Postup pro výrobu nové křížovky je ve skillu `.claude/skills/krizovka/`;
+tenhle soubor popisuje, jak je to postavené uvnitř.
 
 ## České konvence zadrátované do solveru
 

@@ -91,6 +91,19 @@ def build_view(grid_data: dict, clues: dict[str, str], extras: dict[str, str]) -
                     "w": cell_slots.get((r, c), []),
                 }
 
+    # Legenda se do políčka fyzicky nevejde a ořízne se, aniž by to bylo
+    # z dat poznat. Rozpočet odpovídá výchozím 64 px na políčko.
+    overflow: list[tuple[int, str, str]] = []
+    for row in cells:
+        for cell in row:
+            if cell["t"] != "legend" or not cell["clues"]:
+                continue
+            budget = 45 if len(cell["clues"]) == 1 else 28
+            for item in cell["clues"]:
+                if len(item["text"]) > budget:
+                    overflow.append((len(item["text"]), item["word"], item["text"]))
+    overflow.sort(reverse=True)
+
     # Pomůcka: nejméně běžná hesla, stejně jako pod křížovkou v časopise
     hard = sorted({
         slot["src"][0] if slot.get("src") else slot["word"]
@@ -107,6 +120,7 @@ def build_view(grid_data: dict, clues: dict[str, str], extras: dict[str, str]) -
         "pomucka": hard,
         "stats": grid_data["stats"],
         "missing": missing,
+        "overflow": overflow,
     }
 
 
@@ -132,6 +146,19 @@ def main() -> int:
     dict_size = len(json.loads(
         (ROOT / "data" / "words.json").read_text(encoding="utf-8"))["words"])
 
+    # meta.json nese úvodní text a titulek. Když zůstane od minulé křížovky,
+    # vyjde stránka, jejíž zadání popisuje něco úplně jiného — a z dat to
+    # nijak nepoznáš. Proto se kontroluje proti tajence v mřížce.
+    want = " ".join(grid_data["tajenka"])
+    have = meta.get("tajenka_text", "")
+    if have and have.replace(" ", "") != want.replace(" ", ""):
+        print(f"POZOR: data/meta.json patří k jiné křížovce.\n"
+              f"  meta.tajenka_text: {have!r}\n"
+              f"  tajenka v mřížce:  {want!r}\n"
+              f"  Uprav meta.json (number, title, tajenka_text, zadani_html), "
+              f"jinak stránka vyjde s cizím zadáním.", file=sys.stderr)
+
+    view["title"] = meta.get("title", "Švédská křížovka")
     view["number"] = meta.get("number", "1")
     view["tajenka_text"] = meta.get("tajenka_text", " ".join(grid_data["tajenka"]))
     view["zadani_html"] = meta.get("zadani_html", "")
@@ -152,7 +179,7 @@ def main() -> int:
 
     template = (ROOT / "web" / "template.html").read_text(encoding="utf-8")
     payload = json.dumps(view, ensure_ascii=False).replace("</script>", "<\\/script>")
-    page = template.replace("__DATA__", payload)
+    page = template.replace("__DATA__", payload).replace("__TITLE__", view["title"])
     out_html = ROOT / "web" / "krizovka.html"
     out_html.write_text(page, encoding="utf-8")
 
@@ -160,6 +187,11 @@ def main() -> int:
     print(f"slov: {total_words}, bez legendy: {len(view['missing'])}")
     if view["missing"]:
         print("CHYBÍ LEGENDA:", " ".join(sorted(set(view["missing"]))))
+    if view["overflow"]:
+        print(f"PŘÍLIŠ DLOUHÉ LEGENDY ({len(view['overflow'])}) — v políčku se "
+              f"oříznou, zkrať je:")
+        for length, word, text in view["overflow"]:
+            print(f"  {length:3d} zn.  {word:<11} {text}")
     print(f"pomůcka: {', '.join(view['pomucka'])}")
     print(f"zapsáno: {out_json}\n         {out_html}")
     return 0

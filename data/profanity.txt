@@ -1,0 +1,11 @@
+# Vulgarismy a hrubé výrazy, které hunspell jako spisovná slova vede, ale do
+# křížovky nepatří — zvlášť když má tajenkou dětské přísloví. Reaktivně je
+# dohledávat očima po každém běhu solveru není workflow, proto filtr.
+# Formát stejný jako blacklist.txt: slova oddělená mezerami, # je komentář.
+zmrd zmrdi zmrda zmrde srát sraní sračka sračky posrat posraný nasrat nasraný
+kurva kurvy kurev kurvit zkurvit zkurvený píča píče píčo píčovina pičus
+čurák čuráka čuráci hovno hovna hovnivál prdel prdele prdět prd
+mrdat mrdka vymrdat šoustat šukat šuká
+vagina penis šourek varle varlata koitus onanie masturbace
+debil debilní kretén idiot blbec vůl volové kokot kokota
+hajzl hajzlík parchant bastard zmetek

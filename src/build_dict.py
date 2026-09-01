@@ -148,11 +148,12 @@ potom hned dnes včera zítra
 def load_stoplist() -> set[str]:
     """Stoplist v podobě klíčů mřížky — jinak 'už' propustí formu UZ."""
     words: list[str] = list(STOPLIST)
-    extra = ROOT / "data" / "blacklist.txt"
-    if extra.exists():
+    for name in ("blacklist.txt", "profanity.txt"):
+        extra = ROOT / "data" / name
+        if not extra.exists():
+            continue
         for line in extra.read_text(encoding="utf-8").splitlines():
-            line = line.split("#", 1)[0]
-            words.extend(line.split())
+            words.extend(line.split("#", 1)[0].split())
     return {"".join(to_glyphs(w)) for w in words}
 
 
