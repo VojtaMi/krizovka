@@ -1,3 +1,7 @@
+<!doctype html>
+<html lang="cs">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>__TITLE__</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,8 +25,11 @@
     --accent-ink: #FFFFFF;
     --good:       #2C6A4E;
     --bad:        #A6392B;
-    --cell: 64px;
-    --legend-size: 10px;
+    /* zoom i responzivita sahají na --cell-screen; --cell si tak může přepsat tisk */
+    --cell: var(--cell-screen, 64px);
+    --cell-w: var(--cell);
+    --cell-h: var(--cell);
+    --legend-size: var(--legend-screen, 10px);
     color-scheme: light dark;
   }
   @media (prefers-color-scheme: dark) {
@@ -124,7 +131,7 @@
     width: max-content;
   }
   .cell {
-    width: var(--cell); height: var(--cell);
+    width: var(--cell-w); height: var(--cell-h);
     border-right: 1px solid var(--rule-soft);
     border-bottom: 1px solid var(--rule-soft);
     background: var(--card);
@@ -144,13 +151,14 @@
   }
   .cell.legend.blind { background: var(--rule-soft); }
   /* dvě definice v jednom políčku dostanou půlku výšky — musí zdrobnět */
-  .cell.legend.two { font-size: calc(var(--legend-size) - 1.2px); line-height: 1.02; }
+  .cell.legend.two { font-size: calc(var(--legend-size) * 0.88); line-height: 1.02; }
   .clue {
     flex: 1 1 0; min-height: 0;
     padding: 3px 10px 3px 4px;
     position: relative;
     display: flex; align-items: center;
     hyphens: auto;
+    overflow-wrap: anywhere;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
   }
@@ -178,7 +186,7 @@
     text-align: center;
     font-family: Archivo, system-ui, sans-serif;
     font-weight: 700;
-    font-size: calc(var(--cell) * 0.44);
+    font-size: calc(var(--cell-h) * 0.44);
     color: var(--ink);
     text-transform: uppercase;
     padding: 0;
@@ -271,21 +279,57 @@
     font-size: 12px; background: var(--card-2); padding: 1px 5px;
   }
 
-  @media (max-width: 900px) { :root { --cell: 46px; --legend-size: 7.8px; } }
-  @media (max-width: 560px) { :root { --cell: 38px; --legend-size: 6.8px; } }
+  @media (max-width: 900px) { :root { --cell-screen: 46px; --legend-screen: 7.8px; } }
+  @media (max-width: 560px) { :root { --cell-screen: 38px; --legend-screen: 6.8px; } }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 
   @media print {
-    :root { --cell: 12.4mm; --legend-size: 6.6pt;
-            --paper: #fff; --card: #fff; --card-2: #fff;
-            --ink: #000; --ink-soft: #333; --rule: #000; --rule-soft: #666;
-            --taj-fill: #dceaf4; --taj-ink: #000; --accent: #000;
-            --hl: #fff; --hl-taj: #dceaf4; --hl-legend: #fff; }
+    @page { size: A4 portrait; margin: 9mm 8mm; }
+    :root {
+      /* co ze stránky zbyde na mřížku, když se odečte hlavička a panel tajenky */
+      --print-grid-w: 193mm;
+      --print-grid-h: 214mm;
+      /* výšku určuje počet řádků; šířku smí políčko protáhnout až na 1.3:1,
+         aby se dlouhé legendy nemusely lámat uprostřed slova */
+      --cell-h: min(calc(var(--print-grid-h) / var(--rows, 20)),
+                    calc(var(--print-grid-w) / var(--cols, 13)));
+      --cell-w: min(calc(var(--print-grid-w) / var(--cols, 13)),
+                    calc(var(--cell-h) * 1.3));
+      --legend-size: calc(var(--cell-h) * 0.165);
+      --paper: #fff; --card: #fff; --card-2: #F1F3F5;
+      --ink: #000; --ink-soft: #333; --rule: #000; --rule-soft: #8A9299;
+      --taj-fill: #DCE9F3; --taj-ink: #000; --accent: #000;
+      --hl: #fff; --hl-taj: #DCE9F3; --hl-legend: #fff;
+    }
+    /* bez tohohle prohlížeč podtisky zahodí a tajenková políčka splynou se zbytkem */
+    body {
+      background: #fff;
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    }
     .toolbar, .status, .no-print { display: none !important; }
-    .wrap { padding: 0; gap: 14px; max-width: none; }
-    body { background: #fff; }
+    .wrap { padding: 0; gap: 10px; max-width: none; }
+
+    /* mřížka se nesmí rozpůlit mezi stránky, proto se na výšku dopočítá sama */
+    .board-scroll { overflow: visible; padding: 0; display: flex; justify-content: center; }
+    .board, .taj-panel, .masthead, section, .pomucka, .colophon { break-inside: avoid; }
+
+    .masthead { gap: 10px; }
+    .num { width: 15mm; height: 15mm; font-size: 20pt; }
+    .kicker { font-size: 8pt; }
+    .zadani p { font-size: 10.5pt; }
+
+    .clue { padding: calc(var(--cell-h) * 0.045) calc(var(--cell-h) * 0.185)
+                     calc(var(--cell-h) * 0.045) calc(var(--cell-h) * 0.08); }
+    .clue .arrow { font-size: calc(var(--cell-h) * 0.13); }
+    .cell.legend.blind { background: #D6DADE; }
     .cell input { color: #000 !important; }
     .cell.letter.here { box-shadow: none; }
+
+    .taj-panel { padding: 8px 10px; }
+    .taj-box { width: 7mm; height: 8.5mm; font-size: 11pt; }
+    .taj-box.space { width: 3.5mm; }
+    .facts { gap: 8px 18px; }
+    .facts dd { font-size: 16pt; }
   }
 </style>
 
@@ -357,7 +401,7 @@
     board.textContent = "";
     inputs.clear(); cellEl.clear(); solution.clear(); cellWords.clear();
     clueEls.length = 0; tajCells.length = 0; startsHere.clear();
-    board.style.gridTemplateColumns = "repeat(" + W + ", var(--cell))";
+    board.style.gridTemplateColumns = "repeat(" + W + ", var(--cell-w))";
     SLOTS.forEach(function (s, i) {
       const k = keyOf(s.c[0]);
       if (!startsHere.has(k)) startsHere.set(k, []);
@@ -675,8 +719,8 @@
 
   function applySize() {
     const px = SIZES[sizeIx];
-    document.documentElement.style.setProperty("--cell", px + "px");
-    document.documentElement.style.setProperty("--legend-size", LEGEND_AT[px] + "px");
+    document.documentElement.style.setProperty("--cell-screen", px + "px");
+    document.documentElement.style.setProperty("--legend-screen", LEGEND_AT[px] + "px");
     try { localStorage.setItem("krizovka-size", String(sizeIx)); } catch (err) { /* nevadí */ }
     document.getElementById("btn-smaller").disabled = sizeIx === 0;
     document.getElementById("btn-bigger").disabled = sizeIx === SIZES.length - 1;
@@ -718,6 +762,9 @@
   function loadPuzzle(ix) {
     P = DATA.puzzles[ix];
     W = P.width; H = P.height; SLOTS = P.slots;
+    // tisk si z toho dopočítá, jak velké políčko se ještě vejde na jednu stránku
+    document.documentElement.style.setProperty("--cols", String(W));
+    document.documentElement.style.setProperty("--rows", String(H));
     activeSlot = null; activeCell = null; lastTyped = null;
     buildBoard(); buildTajenka(); buildTexts(); syncTajenka();
     say("", null);
