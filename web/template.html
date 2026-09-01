@@ -621,6 +621,24 @@
     if (inp.tagName !== "INPUT") return;
     let v = deaccent(inp.value.toUpperCase()).replace(/[^A-Z]/g, "");
 
+    // C is held back for a possible H. If another letter is typed into the
+    // same input, C was not meant to be replaced: commit C here and put the
+    // new letter into the following cell.
+    if (v.length === 2 && v[0] === "C" && v[1] !== "H") {
+      const next = stepInSlot(false);
+      inp.value = "C";
+      clearMark(inp.dataset.key);
+      if (next) {
+        const nextInp = inputs.get(next);
+        nextInp.value = v[1];
+        clearMark(next);
+        lastTyped = next;
+        goTo(next);
+      }
+      syncTajenka();
+      return;
+    }
+
     // CH do jednoho políčka: H hned po C se sloučí zpátky do minulého políčka
     if (v === "H" && lastTyped && lastTyped !== inp.dataset.key) {
       const prev = inputs.get(lastTyped);
