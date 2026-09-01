@@ -19,12 +19,31 @@ pravidla a v odkrytí čte jako nesmysl.
 V `meta.json` přepiš `title`, `number`, `tajenka_text` a `zadani_html`.
 **Zůstane-li od minulé křížovky, vyjde stránka s cizím zadáním.**
 
-**2. Spusť solver.** Trvá desítky sekund.
+**2. Spusť solver.**
 
 ```bash
-python3 src/solve.py --width 13 --height 20 \
-    --tajenka "PRVNIDIL,DRUHYDIL" --seconds 300 --patterns 2000
+python3 src/solve.py --width 13 --height 20 --tajenka "PRVNIDIL,DRUHYDIL" \
+    --seconds 300 --patterns 6000 --max-rank 100000
 ```
+
+`--max-rank 100000` je nejdůležitější přepínač celého postupu. Ustřihne
+nefrekvenční ocas slovníku (132 tis. forem -> 12,8 tis.), a protože **všechno
+smetí žije právě tam**, odpadá tím většina ručního čištění. Naměřený rozdíl:
+
+| | plný slovník | `--max-rank 100000` |
+|---|---|---|
+| vzácná slova v mřížce | 16–25 | **0** |
+| legend k napsání | 56 | **43** |
+| kola čištění blacklistu | 2–11 | zpravidla žádné |
+| křižování | 90–93 % | ~90 % |
+| běh solveru | ~25 s | ~4 min |
+
+Čtyři minuty navíc ušetří třináct legend i celá kola čištění. Bez něj se do
+křížovky dostanou hesla jako `IPSACE` nebo `ESESMAN` — slovníkově regulérní,
+takže je filtr vulgarismů nechytí.
+
+Pozor: s takhle malým slovníkem projdou jen řidší vzory, takže solver
+potřebuje víc času a víc vzorů. Na 90 sekundách neuspěje vůbec.
 
 Slovník se dogeneruje sám, když je zastaralý. Počet paralelních hledání si
 solver zvolí podle volných jader. Defaulty jsou vyladěné a podložené
@@ -43,9 +62,10 @@ python3 src/verify.py --words
 Verifikátor musí projít, jinak nepokračuj. Pak si přečti výpis slov a
 vyhoď, co nejde vysvětlit legendou → `data/blacklist.txt` → zpět na krok 2.
 
-Počítej se **dvěma až třemi koly**, každé je další desetiminutový běh. Smyčka
-nekonverguje sama: každá nová mřížka nabere čerstvé smetí ze 166 tisíc tvarů.
-Tohle je hlavní časová položka celé práce.
+S `--max-rank` bývá tenhle krok bez nálezu a jde se dál. Bez něj smyčka
+**nekonverguje** — každá nová mřížka nabere čerstvé smetí a dvě nezávislá
+měření skončila na osmi a jedenácti kolech, ne na dvou. Když se do třetího
+kola pořád objevuje smetí, nesnaž se ho vyblacklistovat; sniž `--max-rank`.
 
 **4. Napiš legendy** do `data/clues.json` ke každému heslu z výpisu.
 
