@@ -177,11 +177,31 @@ def main() -> int:
     out_json = ROOT / "data" / "view.json"
     out_json.write_text(json.dumps(view, ensure_ascii=False), encoding="utf-8")
 
+    # Zásobník: každá hotová křížovka dostane vlastní soubor a nic se
+    # nepřepisuje. Nepovedená generace tak nemůže zničit povedenou.
+    store = ROOT / "data" / "puzzles"
+    store.mkdir(parents=True, exist_ok=True)
+    if "--add" in sys.argv:
+        used = sorted(int(f.stem) for f in store.glob("*.json") if f.stem.isdigit())
+        nxt = (used[-1] + 1) if used else 1
+        target = store / f"{nxt:03d}.json"
+        view["number"] = str(nxt)
+        target.write_text(json.dumps(view, ensure_ascii=False), encoding="utf-8")
+        print(f"do zásobníku přidáno: {target}")
+
+    puzzles = [json.loads(f.read_text(encoding="utf-8"))
+               for f in sorted(store.glob("*.json"))]
+    if not puzzles:
+        puzzles = [view]          # zásobník je prázdný, ukaž aspoň tuhle
+
     template = (ROOT / "web" / "template.html").read_text(encoding="utf-8")
-    payload = json.dumps(view, ensure_ascii=False).replace("</script>", "<\\/script>")
-    page = template.replace("__DATA__", payload).replace("__TITLE__", view["title"])
+    payload = json.dumps({"puzzles": puzzles}, ensure_ascii=False)
+    payload = payload.replace("</script>", "<\\/script>")
+    page = (template.replace("__DATA__", payload)
+                    .replace("__TITLE__", puzzles[0].get("title", "Švédská křížovka")))
     out_html = ROOT / "web" / "krizovka.html"
     out_html.write_text(page, encoding="utf-8")
+    print(f"křížovek v zásobníku: {len(puzzles)}")
 
     total_words = len(grid_data["slots"])
     print(f"slov: {total_words}, bez legendy: {len(view['missing'])}")

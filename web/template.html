@@ -101,6 +101,15 @@
     margin: 0 0 4px;
   }
   .zadani p { margin: 0; font-size: 16px; max-width: 62ch; text-wrap: pretty; }
+  #picker {
+    font-family: "Barlow Condensed", system-ui, sans-serif;
+    font-weight: 700; font-size: 12px; letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-left: 10px; padding: 2px 6px;
+    border: 1.5px solid var(--rule); background: var(--card); color: var(--ink);
+    cursor: pointer;
+  }
+  #picker:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .zadani .gap {
     background: var(--taj-fill); color: var(--taj-ink);
     padding: 0 6px; font-style: italic; white-space: nowrap;
@@ -284,7 +293,10 @@
   <header class="masthead">
     <div class="num" id="puzzle-num">1</div>
     <div class="zadani">
-      <p class="kicker">Švédská křížovka s tajenkou</p>
+      <p class="kicker">
+        Švédská křížovka s tajenkou
+        <select id="picker" class="no-print" aria-label="Vyber křížovku" hidden></select>
+      </p>
       <p id="zadani-text"></p>
     </div>
   </header>
@@ -330,9 +342,8 @@
 (function () {
   "use strict";
   const DATA = JSON.parse(document.getElementById("krizovka-data").textContent);
-  const W = DATA.width, H = DATA.height, SLOTS = DATA.slots;
   const board = document.getElementById("board");
-  board.style.gridTemplateColumns = "repeat(" + W + ", var(--cell))";
+  let P, W, H, SLOTS;   // aktuální křížovka ze zásobníku
 
   const inputs = new Map();     // "r,c" -> input
   const cellEl = new Map();     // "r,c" -> .cell
@@ -342,7 +353,17 @@
   const tajCells = [];
   const ARROW = { right: "▶", down: "▼" };
 
-  DATA.cells.forEach(function (row, r) {
+  function buildBoard() {
+    board.textContent = "";
+    inputs.clear(); cellEl.clear(); solution.clear(); cellWords.clear();
+    clueEls.length = 0; tajCells.length = 0; startsHere.clear();
+    board.style.gridTemplateColumns = "repeat(" + W + ", var(--cell))";
+    SLOTS.forEach(function (s, i) {
+      const k = keyOf(s.c[0]);
+      if (!startsHere.has(k)) startsHere.set(k, []);
+      startsHere.get(k).push(i);
+    });
+    P.cells.forEach(function (row, r) {
     row.forEach(function (cell, c) {
       const key = r + "," + c;
       const el = document.createElement("div");
@@ -386,8 +407,9 @@
       }
       cellEl.set(key, el);
       board.appendChild(el);
+      });
     });
-  });
+  }
 
   // ---- výběr slova a směru ------------------------------------------------
   // Rozhoduje se podle toho, které slovo v políčku ZAČÍNÁ, ne kterými slovy
@@ -399,12 +421,8 @@
 
   function keyOf(cell) { return cell[0] + "," + cell[1]; }
 
-  const startsHere = new Map();   // "r,c" -> [indexy slov, která tu začínají]
-  SLOTS.forEach(function (s, i) {
-    const k = keyOf(s.c[0]);
-    if (!startsHere.has(k)) startsHere.set(k, []);
-    startsHere.get(k).push(i);
-  });
+  // "r,c" -> [indexy slov, která tu začínají]; plní se v buildBoard()
+  const startsHere = new Map();
 
   function preferDir(list) {
     const dir = activeSlot !== null ? SLOTS[activeSlot].d : "right";
@@ -587,19 +605,23 @@
   // ---- tajenka ------------------------------------------------------------
   const tajBoxes = [];
   const tajWrap = document.getElementById("taj-cells");
-  DATA.tajenka.forEach(function (part, pi) {
-    tajCells.filter(function (t) { return t.part === pi; }).forEach(function (t) {
-      const b = document.createElement("div");
-      b.className = "taj-box";
-      tajWrap.appendChild(b);
-      tajBoxes.push({ box: b, key: t.key });
+  function buildTajenka() {
+    tajWrap.textContent = "";
+    tajBoxes.length = 0;
+    P.tajenka.forEach(function (part, pi) {
+      tajCells.filter(function (t) { return t.part === pi; }).forEach(function (t) {
+        const b = document.createElement("div");
+        b.className = "taj-box";
+        tajWrap.appendChild(b);
+        tajBoxes.push({ box: b, key: t.key });
+      });
+      if (pi < P.tajenka.length - 1) {
+        const sp = document.createElement("div");
+        sp.className = "taj-box space";
+        tajWrap.appendChild(sp);
+      }
     });
-    if (pi < DATA.tajenka.length - 1) {
-      const sp = document.createElement("div");
-      sp.className = "taj-box space";
-      tajWrap.appendChild(sp);
-    }
-  });
+  }
   function syncTajenka() {
     tajBoxes.forEach(function (t) { t.box.textContent = inputs.get(t.key).value; });
   }
@@ -636,7 +658,7 @@
   document.getElementById("btn-reveal").addEventListener("click", function () {
     inputs.forEach(function (inp, key) { inp.value = solution.get(key); clearMark(key); });
     syncTajenka();
-    say("Tajenka: " + DATA.tajenka_text, "ok");
+    say("Tajenka: " + P.tajenka_text, "ok");
   });
 
   document.getElementById("btn-print").addEventListener("click", function () { window.print(); });
@@ -668,12 +690,14 @@
   applySize();
 
   // ---- texty a čísla ------------------------------------------------------
-  document.getElementById("puzzle-num").textContent = DATA.number || "1";
-  document.getElementById("zadani-text").innerHTML = DATA.zadani_html;
-  document.getElementById("colophon").innerHTML = DATA.colophon_html;
+  function buildTexts() {
+  document.getElementById("puzzle-num").textContent = P.number || "1";
+  document.getElementById("zadani-text").innerHTML = P.zadani_html;
+  document.getElementById("colophon").innerHTML = P.colophon_html;
 
   const facts = document.getElementById("facts");
-  DATA.facts.forEach(function (f) {
+  facts.textContent = "";
+  P.facts.forEach(function (f) {
     const d = document.createElement("div");
     d.className = "fact";
     d.innerHTML = "<dt>" + f.k + "</dt><dd>" + f.v + "<small>" + f.note + "</small></dd>";
@@ -681,12 +705,39 @@
   });
 
   const pom = document.getElementById("pomucka");
-  if (DATA.pomucka && DATA.pomucka.length) {
-    pom.innerHTML = "<b>Pomůcka:</b> " + DATA.pomucka.join(", ") + ".";
+  if (P.pomucka && P.pomucka.length) {
+    pom.innerHTML = "<b>Pomůcka:</b> " + P.pomucka.join(", ") + ".";
+    pom.hidden = false;
   } else {
-    pom.remove();
+    pom.hidden = true;
+  }
   }
 
-  syncTajenka();
+  // ---- přepínání mezi křížovkami v zásobníku -----------------------------
+  const picker = document.getElementById("picker");
+  function loadPuzzle(ix) {
+    P = DATA.puzzles[ix];
+    W = P.width; H = P.height; SLOTS = P.slots;
+    activeSlot = null; activeCell = null; lastTyped = null;
+    buildBoard(); buildTajenka(); buildTexts(); syncTajenka();
+    say("", null);
+    try { localStorage.setItem("krizovka-ix", String(ix)); } catch (err) { /* nevadí */ }
+  }
+  DATA.puzzles.forEach(function (pz, i) {
+    const o = document.createElement("option");
+    o.value = String(i);
+    o.textContent = "č. " + (pz.number || (i + 1)) + " — " + (pz.title || "bez názvu");
+    picker.appendChild(o);
+  });
+  picker.hidden = DATA.puzzles.length < 2;
+  picker.addEventListener("change", function () { loadPuzzle(Number(picker.value)); });
+
+  let start = 0;
+  try {
+    const saved = Number(localStorage.getItem("krizovka-ix"));
+    if (saved >= 0 && saved < DATA.puzzles.length) start = saved;
+  } catch (err) { /* soukromé okno */ }
+  picker.value = String(start);
+  loadPuzzle(start);
 })();
 </script>
