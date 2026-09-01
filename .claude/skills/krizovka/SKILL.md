@@ -48,13 +48,25 @@ Tohle je hlavní časová položka celé práce.
 
 **4. Napiš legendy** do `data/clues.json` ke každému heslu z výpisu.
 
-**5. Postav stránku.**
+**5. Postav stránku a zkontroluj hlášení.**
 
 ```bash
 python3 src/make_page.py
 ```
 
-Hlásí chybějící i příliš dlouhé legendy. Obojí oprav a spusť znovu.
+Hlásí chybějící legendy, příliš dlouhé legendy a nesoulad `meta.json`
+s tajenkou. Všechno oprav a spusť znovu.
+
+**6. Ulož křížovku do zásobníku**, až je čistá:
+
+```bash
+python3 src/make_page.py --add
+```
+
+Bez `--add` se stránka jen překreslí a nová křížovka nikam nepřibude.
+Se `--add` dostane vlastní soubor v `data/puzzles/` a na stránce se
+objeví v přepínači vedle předchozích — nic se nepřepisuje, takže
+nepovedená generace nemůže zničit hotovou.
 
 ## Legendy
 
