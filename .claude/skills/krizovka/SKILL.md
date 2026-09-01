@@ -19,19 +19,20 @@ pravidla a v odkrytí čte jako nesmysl.
 V `meta.json` přepiš `title`, `number`, `tajenka_text` a `zadani_html`.
 **Zůstane-li od minulé křížovky, vyjde stránka s cizím zadáním.**
 
-**2. Spusť solver.** Trvá ~10 minut, pusť ho na pozadí.
+**2. Spusť solver.** Trvá jednotky minut, klidně ho pusť na pozadí.
 
 ```bash
 python3 src/solve.py --width 13 --height 20 \
-    --tajenka "PRVNIDIL,DRUHYDIL" \
-    --seconds 700 --patterns 1600 --keep 8 --per-attempt 9 --nodes 42000
+    --tajenka "PRVNIDIL,DRUHYDIL" --seconds 300 --patterns 2000
 ```
 
 Slovník se dogeneruje sám, když je zastaralý. Počet paralelních hledání si
 solver zvolí podle volných jader. Defaulty jsou vyladěné a podložené
 měřením — neupravuj je naslepo, zvlášť `--nodes`, `--band` a `--keep`.
 Zvyšovat `--keep` se nevyplácí: osmá mřížka zachytí prakticky celý užitek,
-třicátá koupí jedno slovo za trojnásobek času.
+třicátá koupí jedno slovo za trojnásobek času. A hlavně nezvyšuj `--nodes`:
+84 % vzorů se zaplnit nedá a na nich se strop vyplýtvá celý. Naměřeno
+8–10 mřížek za 90 s při 2500 uzlech, ale jen dvě při 42000.
 
 **3. Projdi umístěná slova.**
 

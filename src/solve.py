@@ -48,6 +48,12 @@ def to_glyphs(word: str) -> list[str]:
     return out
 
 
+# Proč je strop uzlů tak nízký: 84 % vzorů se zaplnit nedá a solver na nich
+# jinak vyplýtvá celý rozpočet — naměřeno 99 % času na neúspěších, 1 % na
+# úspěších. Úspěšný fill přitom potřebuje medián 2307 uzlů. Vzdát se pomalého
+# úspěchu a jít na další vzor je levnější než ho dotáhnout: strop 2500 dává
+# 8-10 mřížek za 90 s, strop 42000 jen dvě.
+
 # Pořadí preferencí solveru. Nižší číslo = solver sáhne dřív.
 #   běžný základní tvar  ->  rank z korpusu (0..50 000)
 #   křížovkářská výplň   ->  hned za nimi, jsou to legitimní hesla
@@ -454,7 +460,7 @@ def main() -> int:
                          "vzory, dokud nedojde čas nebo --keep")
     ap.add_argument("--per-attempt", type=float, default=15.0,
                     help="sekund na jeden vzor, než se jde na další")
-    ap.add_argument("--nodes", type=int, default=60_000,
+    ap.add_argument("--nodes", type=int, default=2_500,
                     help="strop uzlů na jeden vzor")
     ap.add_argument("--blind-weight", type=float, default=1.2,
                     help="jak silně se trestají legendy bez definice")
