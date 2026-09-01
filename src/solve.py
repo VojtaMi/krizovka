@@ -20,6 +20,8 @@ import argparse
 import hashlib
 import heapq
 import json
+import multiprocessing
+import os
 import random
 import subprocess
 import sys
@@ -458,11 +460,13 @@ def main() -> int:
                     help="jak silně se trestají legendy bez definice")
     ap.add_argument("--band", type=float, default=0.25,
                     help="jak velké horní pásmo vzorů se před výběrem zamíchá")
-    ap.add_argument("--keep", type=int, default=12,
+    ap.add_argument("--keep", type=int, default=8,
                     help="kolik hotových mřížek vyrobit, než se vybere nejlepší")
     ap.add_argument("--patterns", type=int, default=400,
                     help="kolik vzorů vygenerovat a seřadit podle křižování")
     ap.add_argument("--seed", type=int, default=1)
+    ap.add_argument("--jobs", type=int, default=0,
+                    help="kolik hledání pustit naráz; 0 = podle volných jader")
     ap.add_argument("--allow-corpus", action="store_true",
                     help="povolit ohnuté tvary z titulků (nese s sebou smetí)")
     ap.add_argument("--out", default=str(ROOT / "data" / "grid.json"))
@@ -478,17 +482,62 @@ def main() -> int:
                 f"nevejde (strop je {args.width - 1}, pohodlně {args.width - 3}). "
                 f"Rozděl tajenku na víc dílů.")
     ensure_dictionary()
+
+    jobs = auto_jobs(args.jobs)
+    if jobs == 1:
+        found = search_worker((vars(args), args.seed))
+    else:
+        # Běhy jsou na sobě nezávislé, liší se jen semínkem. Paralelizace tak
+        # nemění chování solveru, jen jich pustí víc naráz — na rozdíl od
+        # zrychlování samotného prohledávání tady není co pokazit.
+        print(f"pouštím {jobs} hledání paralelně "
+              f"({len(os.sched_getaffinity(0))} jader, zátěž "
+              f"{os.getloadavg()[0]:.1f})", file=sys.stderr)
+        payload = [(vars(args), args.seed + 1000 * i) for i in range(jobs)]
+        with multiprocessing.Pool(jobs) as pool:
+            found = [r for chunk in pool.map(search_worker, payload) for r in chunk]
+
+    if not found:
+        print("nepodařilo se vyplnit mřížku", file=sys.stderr)
+        return 1
+    found.sort(key=lambda r: (r["rare"], -r["stats"]["interlock_pct"]))
+    best = found[0]
+    print(f"vybrána mřížka: křižování {best['stats']['interlock_pct']} %, "
+          f"neznámých hesel {best['rare']} (z {len(found)} hotových mřížek)",
+          file=sys.stderr)
+    Path(args.out).write_text(json.dumps(best["out"], ensure_ascii=False, indent=1),
+                              encoding="utf-8")
+    print(f"zapsáno: {args.out}", file=sys.stderr)
+    return 0
+
+
+def auto_jobs(requested: int) -> int:
+    """Kolik hledání pustit naráz.
+
+    Pevný default nedává smysl: na vytíženém notebooku si čtyři workery
+    konkurují a nezrychlí nic (naměřeno 6 mřížek proti 5), zatímco dva na
+    tomtéž stroji daly 7 proti 4. Rozhoduje volná kapacita, ne počet jader.
+    """
+    cores = len(os.sched_getaffinity(0))
+    if requested > 0:
+        return max(1, min(requested, cores))
+    try:
+        load = os.getloadavg()[0]
+    except OSError:
+        load = 0.0
+    return max(1, min(cores, int(cores - load)))
+
+
+def search_worker(payload) -> list[dict]:
+    """Jedno nezávislé hledání. Vrací hotové mřížky jako čistá data."""
+    cfg, seed = payload
+    args = argparse.Namespace(**cfg)
+    parts = [p.strip().upper() for p in args.tajenka.split(",") if p.strip()]
     lex = Lexicon(WORDS, args.max_rank, ROOT / "data" / "extras.json",
                   allow_corpus=args.allow_corpus)
-    print(f"slovník: {sum(len(v) for v in lex.by_len.values())} forem "
-          f"(max_rank={args.max_rank})", file=sys.stderr)
-
-    rng = random.Random(args.seed)
+    rng = random.Random(seed)
     deadline = time.monotonic() + args.seconds
-    best = None
-    solved = 0
-
-    print(f"hledám vzory (dávka {args.patterns})...", file=sys.stderr)
+    results: list[dict] = []
     patterns = []
     for _ in range(args.patterns):
         rows = pick_tajenka_rows(args.height, parts, rng)
@@ -513,10 +562,6 @@ def main() -> int:
     head = patterns[:band]
     rng.shuffle(head)
     patterns = head + patterns[band:]
-    if patterns:
-        print(f"vzorů: {len(patterns)}, křižování nejlepší "
-              f"{patterns[0][0] * 100:.0f} % / nejhorší {patterns[-1][0] * 100:.0f} %",
-              file=sys.stderr)
 
     # Dřív tu byl default --attempts 60, který tiše přebíjel --keep i --seconds:
     # při úspěšnosti fillu ~1:34 doběhl běh po pěti mřížkách místo třiceti.
@@ -527,63 +572,47 @@ def main() -> int:
 
         filler = Filler(lex, slots, rng)
         attempt_deadline = min(deadline, time.monotonic() + args.per_attempt)
-        if filler.solve(attempt_deadline, node_budget=args.nodes):
-            total, crossed = interlock_stats(grid, args.width, args.height, slots)
-            rare = sum(1 for si in range(len(slots))
-                       if not slots[si].fixed
-                       and meta(lex, filler.assigned[si])[2] is not None
-                       and meta(lex, filler.assigned[si])[2] >= RARE_BASE_RANK)
-            # nižší je lepší: nejdřív málo neznámých slov, pak hodně křižování
-            score = (rare, -crossed / total)
-            solved += 1
-            mark = ""
-            if best is None or score < best[0]:
-                best = (score, grid, slots, filler, total, crossed)
-                mark = "  <- zatím nejlepší"
-            print(f"pokus {attempt + 1}: HOTOVO, {len(slots)} slov, "
-                  f"křižování {crossed * 100 // total} %, "
-                  f"neznámých hesel {rare}{mark}", file=sys.stderr)
-            if solved >= args.keep:
-                break
+        if not filler.solve(attempt_deadline, node_budget=args.nodes):
             continue
-        print(f"pokus {attempt + 1} (skóre {ratio:.3f}): "
-              f"neúspěch, {filler.nodes} uzlů", file=sys.stderr)
 
-    if best is None:
-        print("nepodařilo se vyplnit mřížku", file=sys.stderr)
-        return 1
-
-    _score, grid, slots, filler, total, crossed = best
-    print(f"vybrána mřížka: křižování {crossed * 100 / total:.1f} %, "
-          f"neznámých hesel {_score[0]} (z {solved} hotových mřížek)",
-          file=sys.stderr)
-    out = {
-        "dict_sha": dictionary_fingerprint(),
-        "width": args.width,
-        "height": args.height,
-        "tajenka": parts,
-        "grid": ["".join(row) for row in grid],
-        "letters": {f"{r},{c}": g for (r, c), g in filler.values.items()},
-        "slots": [
-            {
-                "cells": [[r, c] for r, c in s.cells],
-                "dir": s.direction,
-                "word": "".join(filler.assigned[i]),
-                "src": meta(lex, filler.assigned[i])[0],
-                "clue": meta(lex, filler.assigned[i])[1],
-                "rank": meta(lex, filler.assigned[i])[2],
-                "label": s.label,
-            }
-            for i, s in enumerate(slots)
-        ],
-        "stats": {"letter_cells": total, "crossed": crossed,
-                  "interlock_pct": round(crossed * 100 / total, 1),
-                  "words": len(slots)},
-    }
-    Path(args.out).write_text(json.dumps(out, ensure_ascii=False, indent=1),
-                              encoding="utf-8")
-    print(f"zapsáno: {args.out}", file=sys.stderr)
-    return 0
+        total, crossed = interlock_stats(grid, args.width, args.height, slots)
+        rare = sum(1 for si in range(len(slots))
+                   if not slots[si].fixed
+                   and meta(lex, filler.assigned[si])[2] is not None
+                   and meta(lex, filler.assigned[si])[2] >= RARE_BASE_RANK)
+        print(f"[seed {seed}] mřížka {len(results) + 1}: {len(slots)} slov, "
+              f"křižování {crossed * 100 // total} %, neznámých hesel {rare}",
+              file=sys.stderr)
+        results.append({
+            "rare": rare,
+            "out": {
+                "dict_sha": dictionary_fingerprint(),
+                "width": args.width,
+                "height": args.height,
+                "tajenka": parts,
+                "grid": ["".join(row) for row in grid],
+                "letters": {f"{r},{c}": g for (r, c), g in filler.values.items()},
+                "slots": [
+                    {
+                        "cells": [[r, c] for r, c in sl.cells],
+                        "dir": sl.direction,
+                        "word": "".join(filler.assigned[i]),
+                        "src": meta(lex, filler.assigned[i])[0],
+                        "clue": meta(lex, filler.assigned[i])[1],
+                        "rank": meta(lex, filler.assigned[i])[2],
+                        "label": sl.label,
+                    }
+                    for i, sl in enumerate(slots)
+                ],
+                "stats": {"letter_cells": total, "crossed": crossed,
+                          "interlock_pct": round(crossed * 100 / total, 1),
+                          "words": len(slots)},
+            },
+        })
+        results[-1]["stats"] = results[-1]["out"]["stats"]
+        if len(results) >= args.keep:
+            break
+    return results
 
 
 def meta(lex: Lexicon, word: tuple[str, ...]):

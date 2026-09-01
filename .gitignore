@@ -22,3 +22,6 @@ __pycache__/
 *.py[cod]
 .venv/
 venv/
+
+# zbytky po pokusu o worktree izolaci
+.claude/worktrees/

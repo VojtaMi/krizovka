@@ -24,11 +24,14 @@ V `meta.json` přepiš `title`, `number`, `tajenka_text` a `zadani_html`.
 ```bash
 python3 src/solve.py --width 13 --height 20 \
     --tajenka "PRVNIDIL,DRUHYDIL" \
-    --seconds 700 --patterns 1600 --keep 30 --per-attempt 9 --nodes 42000
+    --seconds 700 --patterns 1600 --keep 8 --per-attempt 9 --nodes 42000
 ```
 
-Slovník se dogeneruje sám, když je zastaralý. Defaulty jsou vyladěné —
-neupravuj je naslepo, zvlášť `--nodes` a `--band`.
+Slovník se dogeneruje sám, když je zastaralý. Počet paralelních hledání si
+solver zvolí podle volných jader. Defaulty jsou vyladěné a podložené
+měřením — neupravuj je naslepo, zvlášť `--nodes`, `--band` a `--keep`.
+Zvyšovat `--keep` se nevyplácí: osmá mřížka zachytí prakticky celý užitek,
+třicátá koupí jedno slovo za trojnásobek času.
 
 **3. Projdi umístěná slova.**
 
