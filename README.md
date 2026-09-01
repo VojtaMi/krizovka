@@ -48,6 +48,18 @@ git clone <repo> && cd krizovka
 python3 src/make_page.py              # postaví stránku z hotových křížovek
 ```
 
+## Publikace
+
+Hotová stránka je statický soubor a běží v Docker Compose stacku za Traefikem.
+Lokálně ji lze ověřit bez serveru příkazem:
+
+```bash
+python3 -m http.server 8080 --directory web
+```
+
+Stack obsluhuje `krizovka.vmikel.eu`; aplikace samotná nemá databázi, API ani
+tajné údaje. Konfigurace je v `Dockerfile` a `docker-compose.yml`.
+
 Slovník i frekvenční seznam jsou v repozitáři, takže solver jde spustit
 hned. Na tvorbu nové křížovky je navíc potřeba jazykový model — legendy píše
 on.
