@@ -19,7 +19,7 @@ pravidla a v odkrytí čte jako nesmysl.
 V `meta.json` přepiš `title`, `number`, `tajenka_text` a `zadani_html`.
 **Zůstane-li od minulé křížovky, vyjde stránka s cizím zadáním.**
 
-**2. Spusť solver.** Trvá jednotky minut, klidně ho pusť na pozadí.
+**2. Spusť solver.** Trvá desítky sekund.
 
 ```bash
 python3 src/solve.py --width 13 --height 20 \
