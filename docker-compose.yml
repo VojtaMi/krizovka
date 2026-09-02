@@ -1,0 +1,12 @@
+# Statická stránka za nginxem: jedna služba, žádná databáze, žádné klíče.
+# `docker compose up -d` a křížovka běží na http://localhost:8080.
+#
+# Vlastní nasazení — reverzní proxy, domény, ostatní služby — tenhle
+# repozitář neřeší; to je konfigurace konkrétního serveru, ne aplikace.
+services:
+  krizovka:
+    build: .
+    image: krizovka:latest
+    restart: unless-stopped
+    ports:
+      - "8080:80"
