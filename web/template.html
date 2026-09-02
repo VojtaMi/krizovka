@@ -16,10 +16,11 @@
     --ink-soft:   #4C565E;
     --rule:       #8C959C;
     --rule-soft:  #B9C1C7;
-    --taj-fill:   #C2DBEC;
+    --taj-fill:   #A9D0E9;
     --taj-ink:    #123E57;
-    --hl:         #C6DFF2;
-    --hl-taj:     #93C0DE;
+    --taj-mark:   #1D5A78;
+    --hl:         #F5D078;
+    --hl-taj:     #EFC153;
     --hl-legend:  #FBF0CE;
     --accent:     #1D5A78;
     --accent-ink: #FFFFFF;
@@ -41,10 +42,11 @@
       --ink-soft:  #9DA9B2;
       --rule:      #56626B;
       --rule-soft: #39444C;
-      --taj-fill:  #1B3F55;
+      --taj-fill:  #113D5B;
       --taj-ink:   #BEDDEF;
-      --hl:        #354C5C;
-      --hl-taj:    #37718F;
+      --taj-mark:  #8FCDEA;
+      --hl:        #6A4E12;
+      --hl-taj:    #8A661A;
       --hl-legend: #4A4126;
       --accent:    #7CBEDD;
       --accent-ink:#0C1216;
@@ -60,10 +62,11 @@
     --ink-soft:  #9DA9B2;
     --rule:      #56626B;
     --rule-soft: #39444C;
-    --taj-fill:  #1B3F55;
+    --taj-fill:  #113D5B;
     --taj-ink:   #BEDDEF;
-    --hl:        #354C5C;
-    --hl-taj:    #37718F;
+    --taj-mark:  #8FCDEA;
+    --hl:        #6A4E12;
+    --hl-taj:    #8A661A;
     --hl-legend: #4A4126;
     --accent:    #7CBEDD;
     --accent-ink:#0C1216;
@@ -178,8 +181,20 @@
 
   .cell.letter { padding: 0; }
   .cell.letter.taj { background: var(--taj-fill); }
+  /* tajenka se pozná i tvarem, ne jen výplní: přes aktivní slovo se podtisk přebarví
+     a v tisku nebo při horším kontrastu monitoru by zmizel úplně */
+  .cell.letter.taj::before {
+    content: "";
+    position: absolute; left: 0; top: 0; width: 0; height: 0;
+    border-style: solid;
+    border-width: calc(var(--cell-h) * 0.17) calc(var(--cell-h) * 0.17) 0 0;
+    border-color: var(--taj-mark) transparent transparent transparent;
+    pointer-events: none;
+  }
   .cell.letter.in-word { background: var(--hl); }
   .cell.letter.taj.in-word { background: var(--hl-taj); }
+  /* na teplé výplni aktivního slova by modrý inkoust tajenky drhnul */
+  .cell.letter.taj.in-word input { color: var(--ink); }
   .cell input {
     width: 100%; height: 100%;
     border: 0; background: transparent;
@@ -298,7 +313,7 @@
       --legend-size: calc(var(--cell-h) * 0.165);
       --paper: #fff; --card: #fff; --card-2: #F1F3F5;
       --ink: #000; --ink-soft: #333; --rule: #000; --rule-soft: #8A9299;
-      --taj-fill: #DCE9F3; --taj-ink: #000; --accent: #000;
+      --taj-fill: #DCE9F3; --taj-ink: #000; --taj-mark: #000; --accent: #000;
       --hl: #fff; --hl-taj: #DCE9F3; --hl-legend: #fff;
     }
     /* bez tohohle prohlížeč podtisky zahodí a tajenková políčka splynou se zbytkem */
