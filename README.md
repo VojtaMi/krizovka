@@ -50,15 +50,18 @@ python3 src/make_page.py              # postaví stránku z hotových křížove
 
 ## Publikace
 
-Hotová stránka je statický soubor a běží v Docker Compose stacku za Traefikem.
-Lokálně ji lze ověřit bez serveru příkazem:
+Hotová stránka je jeden statický soubor — nemá databázi, API ani tajné údaje.
+Nasazená běží na [krizovka.vmikel.eu](https://krizovka.vmikel.eu). Lokálně
+stačí kterýkoli z těch dvou způsobů:
 
 ```bash
-python3 -m http.server 8080 --directory web
+python3 -m http.server 8080 --directory web   # bez Dockeru
+docker compose up -d                          # nginx, http://localhost:8080
 ```
 
-Stack obsluhuje `krizovka.vmikel.eu`; aplikace samotná nemá databázi, API ani
-tajné údaje. Konfigurace je v `Dockerfile` a `docker-compose.yml`.
+`Dockerfile` a `docker-compose.yml` popisují jen tuhle jednu službu. Reverzní
+proxy, domény a zbytek serveru sem nepatří — to je konfigurace konkrétního
+stroje, ne aplikace.
 
 Slovník i frekvenční seznam jsou v repozitáři, takže solver jde spustit
 hned. Na tvorbu nové křížovky je navíc potřeba jazykový model — legendy píše

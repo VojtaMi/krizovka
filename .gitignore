@@ -25,4 +25,11 @@ venv/
 
 # zbytky po pokusu o worktree izolaci
 .claude/worktrees/
+
+# --- konfigurace konkrétního serveru -------------------------------------
+# Rosti stack obsluhuje i jiné aplikace než křížovku; jeho compose, handoff
+# a stav CLI patří do soukromého platform repozitáře, ne sem. Sem se to
+# dostalo omylem a je to i vyčištěné z historie.
 .rostistate
+PLATFORM-HANDOFF.md
+docker-compose.rosti.yml
